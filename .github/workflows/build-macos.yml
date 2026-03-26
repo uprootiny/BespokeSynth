@@ -1,0 +1,102 @@
+name: Build macOS Sequoia
+
+on:
+  push:
+    branches: [main, master]
+    tags: ['v*']
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build-macos:
+    name: macOS Sequoia Universal
+    runs-on: macos-15
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Install Python 3.10 (universal pkg)
+        run: |
+          wget -q https://www.python.org/ftp/python/3.10.0/python-3.10.0post2-macos11.pkg
+          sudo installer -pkg python-3.10.0post2-macos11.pkg -target /
+          /Library/Frameworks/Python.framework/Versions/3.10/bin/python3 --version
+
+      - name: Install appdmg
+        run: npm install -g appdmg
+
+      - name: Configure CMake
+        run: |
+          cmake -Bbuild \
+            -GXcode \
+            -DCMAKE_OSX_ARCHITECTURES='arm64;x86_64' \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBESPOKE_PORTABLE=True \
+            -DBESPOKE_PYTHON_ROOT='/Library/Frameworks/Python.framework/Versions/3.10'
+
+      - name: Build BespokeSynth
+        run: |
+          cmake --build build --config Release --target BespokeSynth --parallel 4
+
+      - name: Build .dmg (nightly-package)
+        run: |
+          cmake --build build --config Release --target nightly-package --parallel 4
+
+      - name: Locate artifacts
+        id: artifacts
+        run: |
+          APP_PATH=$(find build -name "BespokeSynth.app" -type d | head -1)
+          DMG_PATH=$(find build/nightly -name "*.dmg" -type f 2>/dev/null | head -1)
+
+          echo "app_path=${APP_PATH}" >> "$GITHUB_OUTPUT"
+          echo "dmg_path=${DMG_PATH}" >> "$GITHUB_OUTPUT"
+
+          echo "APP: ${APP_PATH}"
+          echo "DMG: ${DMG_PATH}"
+
+          # Create a zip of the .app for upload
+          if [ -n "$APP_PATH" ]; then
+            ditto -c -k --keepParent "$APP_PATH" build/BespokeSynth-macOS.app.zip
+          fi
+
+      - name: Upload .app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BespokeSynth-macOS-app
+          path: build/BespokeSynth-macOS.app.zip
+          if-no-files-found: warn
+
+      - name: Upload .dmg artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BespokeSynth-macOS-dmg
+          path: build/nightly/*.dmg
+          if-no-files-found: warn
+
+  release:
+    name: Create GitHub Release
+    needs: build-macos
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          draft: false
+          prerelease: false
+          files: |
+            artifacts/BespokeSynth-macOS-app/*.zip
+            artifacts/BespokeSynth-macOS-dmg/*.dmg
