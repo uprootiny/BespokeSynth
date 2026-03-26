@@ -150,7 +150,7 @@ void DrumPlayer::SetUpHitDirectories()
    File parentDirectory(ofToDataPath("drums"));
    Array<File> hitDirs;
    parentDirectory.findChildFiles(hitDirs, File::findDirectories, true);
-   for (auto dir : hitDirs)
+   for (auto& dir : hitDirs)
    {
       Array<File> filesInDir;
       dir.findChildFiles(filesInDir, File::findFiles, false);
@@ -162,7 +162,7 @@ void DrumPlayer::SetUpHitDirectories()
 void DrumPlayer::DrumHit::UpdateHitDirectoryDropdown()
 {
    mHitCategoryDropdown->Clear();
-   for (auto dir : sHitDirectories)
+   for (auto& dir : sHitDirectories)
       mHitCategoryDropdown->AddLabel(dir, mHitCategoryDropdown->GetNumValues());
    mHitCategoryIndex = -1;
    for (int i = 0; i < mHitCategoryDropdown->GetNumValues(); ++i)
@@ -520,43 +520,40 @@ void DrumPlayer::PlayNote(NoteMessage note)
    }
 }
 
-bool DrumPlayer::OnPush2Control(Push2Control* push2, MidiMessageType type, int controlIndex, float midiValue)
+bool DrumPlayer::OnAbletonGridControl(IAbletonGridDevice* abletonGrid, int controlIndex, float midiValue)
 {
-   if (type == kMidiMessage_Note)
+   if (controlIndex >= abletonGrid->GetGridStartIndex() && controlIndex < abletonGrid->GetGridStartIndex() + abletonGrid->GetGridNumPads())
    {
-      if (controlIndex >= 36 && controlIndex <= 99)
+      int gridIndex = controlIndex - abletonGrid->GetGridStartIndex();
+      int x = gridIndex % 8;
+      int y = gridIndex / 8;
+
+      if (x < 4 && y < 4)
       {
-         int gridIndex = controlIndex - 36;
-         int x = gridIndex % 8;
-         int y = gridIndex / 8;
-
-         if (x < 4 && y < 4)
-         {
-            OnGridButton(x, 3 - y, midiValue / 127.0f, nullptr);
-         }
-         else if (x < 4 && midiValue > 0)
-         {
-            int index = x + (y - 4) * 4;
-            if (index == mPush2SelectedHitIdx)
-            {
-               mPush2SelectedHitIdx = -1;
-            }
-            else
-            {
-               mPush2SelectedHitIdx = index;
-               mSelectedHitIdx = index;
-               UpdateVisibleControls();
-            }
-         }
-
-         return true;
+         OnGridButton(x, 3 - y, midiValue / 127.0f, nullptr);
       }
+      else if (x < 4 && midiValue > 0)
+      {
+         int index = x + (y - 4) * 4;
+         if (index == mPush2SelectedHitIdx)
+         {
+            mPush2SelectedHitIdx = -1;
+         }
+         else
+         {
+            mPush2SelectedHitIdx = index;
+            mSelectedHitIdx = index;
+            UpdateVisibleControls();
+         }
+      }
+
+      return true;
    }
 
    return false;
 }
 
-void DrumPlayer::UpdatePush2Leds(Push2Control* push2)
+void DrumPlayer::UpdateAbletonGridLeds(IAbletonGridDevice* abletonGrid)
 {
    for (int x = 0; x < 8; ++x)
    {
@@ -589,7 +586,7 @@ void DrumPlayer::UpdatePush2Leds(Push2Control* push2)
             }
          }
 
-         push2->SetLed(kMidiMessage_Note, x + y * 8 + 36, pushColor, pushColorBlink);
+         abletonGrid->SetLed(x + y * 8 + 36, pushColor, pushColorBlink);
       }
    }
 }
@@ -698,7 +695,7 @@ void DrumPlayer::SampleDropped(int x, int y, Sample* sample)
 
 void DrumPlayer::ImportSampleCuePoint(SamplePlayer* player, int sourceCueIndex, int destHitIndex)
 {
-   if (player != nullptr)
+   if (player != nullptr && player->validCuePoint(sourceCueIndex))
    {
       ChannelBuffer* data = player->GetCueSampleData(sourceCueIndex);
       Sample sample;
@@ -1191,7 +1188,7 @@ void DrumPlayer::DrumHit::LoadRandomSample()
 {
    File dir(ofToDataPath("drums/" + mHitCategory));
    Array<File> files;
-   for (auto file : dir.findChildFiles(File::findFiles, false))
+   for (auto& file : dir.findChildFiles(File::findFiles, false))
    {
       if (file.getFileName()[0] != '.')
          files.add(file);
@@ -1209,7 +1206,7 @@ void DrumPlayer::DrumHit::LoadNextSample(int direction)
    int i = 0;
    auto dirContents = dir.findChildFiles(File::findFiles, false);
    dirContents.sort();
-   for (auto file : dirContents)
+   for (auto& file : dirContents)
    {
       if (file.getFileName()[0] != '.')
       {

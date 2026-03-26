@@ -103,10 +103,12 @@ class DropdownList : public IUIControl, public IPulseReceiver
 public:
    DropdownList(IDropdownListener* owner, const char* name, int x, int y, int* var, float width = -1);
    DropdownList(IDropdownListener* owner, const char* name, IUIControl* anchor, AnchorDirection anchorDirection, int* var, float width = -1);
+   IDropdownListener* GetOwner() { return mOwner; }
    void AddLabel(std::string label, int value);
    void RemoveLabel(int value);
    void SetLabel(std::string label, int value);
    std::string GetLabel(int val) const;
+   bool HasLabel(int val) const;
    void SetDisplayStyle(DropdownDisplayStyle style) { mDisplayStyle = style; }
    void Render() override;
    bool MouseMoved(float x, float y) override;
@@ -115,6 +117,7 @@ public:
    bool DropdownClickedAt(int x, int y);
    void SetIndex(int i, double time, bool forceUpdate);
    void Clear();
+   int* GetVar() { return mVar; }
    void SetVar(int* var) { mVar = var; }
    EnumMap GetEnumMap();
    void SetUnknownItemString(std::string str)
@@ -152,6 +155,7 @@ public:
    void Increment(float amount) override;
    void Poll() override;
    bool CanBeTargetedBy(PatchCableSource* source) const override;
+   bool ShouldDisplayAsInactive() const override;
    void SaveState(FileStreamOut& out) override;
    void LoadState(FileStreamIn& in, bool shouldSetValue = true) override;
 

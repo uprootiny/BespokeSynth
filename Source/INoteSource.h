@@ -44,7 +44,7 @@ public:
 
    //INoteReceiver
    void PlayNote(NoteMessage note) override;
-   void SendPressure(int pitch, int pressure) override;
+   void SendPressure(int channel, int pressure) override;
    void SendCC(int control, int value, int voiceIdx = -1) override;
    void SendMidi(const juce::MidiMessage& message) override;
 
@@ -53,6 +53,7 @@ public:
    void ResetStackDepth() { mStackDepth = 0; }
    bool* GetNotes() { return mNotes; }
    bool HasHeldNotes();
+   bool IsNoteHeld(int pitch) const { return mNotes[pitch]; }
    std::list<int> GetHeldNotesList();
 
 private:

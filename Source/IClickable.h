@@ -70,7 +70,7 @@ public:
    }
    const char* Name() const { return mName; }
    char* NameMutable() { return mName; }
-   std::string Path(bool ignoreContext = false, bool useDisplayName = false);
+   std::string Path(bool ignoreContext = false, bool useDisplayName = false, IClickable* relativeTo = nullptr);
    virtual bool CheckNeedsDraw();
    virtual void SetShowing(bool showing) { mShowing = showing; }
    bool IsShowing() const { return mShowing; }
@@ -83,6 +83,7 @@ public:
    {
       mHasOverrideDisplayName = true;
       mOverrideDisplayName = name;
+      UpdateWidth();
    }
    std::string GetDisplayName()
    {
@@ -101,6 +102,7 @@ protected:
    virtual void OnClicked(float x, float y, bool right) {}
    virtual bool MouseMoved(float x, float y) { return false; }
    virtual bool MouseScrolled(float x, float y, float scrollX, float scrollY, bool isSmoothScroll, bool isInvertedScroll) { return false; }
+   virtual void UpdateWidth() {}
 
    float mX{ 0 };
    float mY{ 0 };
@@ -113,6 +115,12 @@ private:
    bool mHasOverrideDisplayName{ false };
    std::string mOverrideDisplayName{ "" };
 };
+
+template <class T>
+bool IsOfType(IClickable* clickable)
+{
+   return dynamic_cast<T>(clickable) != nullptr;
+}
 
 class IKeyboardFocusListener
 {

@@ -82,6 +82,8 @@ false;
 #endif
 //static
 bool ScriptModule::sHasLoadedUntrustedScript = false;
+//static
+IAbletonGridDevice* ScriptModule::sCurrentAbletonGridDevice = nullptr;
 
 //static
 ofxJSONElement ScriptModule::sStyleJSON;
@@ -781,28 +783,31 @@ void ScriptModule::PrintText(std::string text)
 
 IUIControl* ScriptModule::GetUIControl(std::string path)
 {
-   IUIControl* control;
-   std::string prefix = "";
-
    if (path == "")
       return nullptr;
 
-   //if path[0] == '$', skip prefix calculation
-   if (path[0] != '$')
-   {
-      //if path has two ~ chars: path is prefab full path: skip prefix calculation
-      if (std::count(path.begin(), path.end(), '~') < 2)
-      {
-         prefix = Path();
-         if (ofIsStringInString(prefix, "~"))
-            //script is in prefab: create prefix up to last ~ (also handles nested prefabs)
-            prefix = prefix.substr(0, prefix.rfind('~') + 1);
-         else
-            prefix = "";
-      }
-   }
+   std::string fullPath = path;
 
-   control = TheSynth->FindUIControl(prefix + path);
+   if (path[0] == '$')
+      //absolute path provided by the user
+      fullPath = path;
+   else if (std::count(path.begin(), path.end(), '~') >= 2)
+      //absolute path within a prefab
+      fullPath = path;
+   else if (ofIsStringInString(Path(), "~") && !ofIsStringInString(path, "~"))
+      //in a prefab, referencing a script variable
+      fullPath = Path() + "~" + path;
+   else if (!ofIsStringInString(Path(), "~") && ofIsStringInString(path, "~"))
+      //main screen, referencing a module
+      fullPath = path;
+   else if (ofIsStringInString(Path(), "~") && ofIsStringInString(path, "~"))
+      //in a prefab, referencing module in the current or nested prefab
+      fullPath = Path().substr(0, Path().rfind('~') + 1) + path;
+   else
+      //main screen, referencing a script variable
+      fullPath = Path() + "~" + path;
+
+   IUIControl* control = TheSynth->FindUIControl(fullPath);
 
    return control;
 }
@@ -898,6 +903,9 @@ void ScriptModule::ConnectOscInput(int port)
 
 void ScriptModule::oscMessageReceived(const OSCMessage& msg)
 {
+   if (mLastError != "")
+      return;
+
    std::string address = msg.getAddressPattern().toString().toStdString();
    std::string messageString = address;
 
@@ -914,8 +922,37 @@ void ScriptModule::oscMessageReceived(const OSCMessage& msg)
    RunCode(gTime, "on_osc(\"" + messageString + "\")");
 }
 
+bool ScriptModule::OnAbletonGridControl(IAbletonGridDevice* abletonGrid, int controlIndex, float midiValue)
+{
+   if (mLastError != "")
+      return false;
+
+   if (controlIndex >= AbletonDevice::kChannelPressureIndex && controlIndex < AbletonDevice::kChannelPressureIndex + AbletonDevice::kNumChannelPressureIndices)
+      return false; //don't spam with pressure messages
+
+   sCurrentAbletonGridDevice = abletonGrid;
+   RunCode(gTime, "on_ableton_grid_control(abletongriddevice.get_current(), " + ofToString(controlIndex) + ", " + ofToString(midiValue) + ")", K(hasReturnValue));
+
+   if (mLastError == "")
+      return mLastReturnValueBool;
+   else
+      return false;
+}
+
+void ScriptModule::UpdateAbletonGridLeds(IAbletonGridDevice* abletonGrid)
+{
+   if (mLastError != "")
+      return;
+
+   sCurrentAbletonGridDevice = abletonGrid;
+   RunCode(gTime, "update_ableton_grid_leds(abletongriddevice.get_current())");
+}
+
 void ScriptModule::SysExReceived(const uint8_t* data, int data_size)
 {
+   if (mLastError != "")
+      return;
+
    // Avoid code injection by preventing the sysex payload to be interpreted as Python
    // - convert the sysex payload to hex
    // - use bytes.fromhex in Python to parse it
@@ -929,6 +966,9 @@ void ScriptModule::SysExReceived(const uint8_t* data, int data_size)
 
 void ScriptModule::MidiReceived(MidiMessageType messageType, int control, float value, int channel)
 {
+   if (mLastError != "")
+      return;
+
    mMidiMessageQueueMutex.lock();
    mMidiMessageQueue.push_back("on_midi(" + ofToString((int)messageType) + ", " + ofToString(control) + ", " + ofToString(value) + ", " + ofToString(channel) + ")");
    mMidiMessageQueueMutex.unlock();
@@ -1105,22 +1145,29 @@ void ScriptModule::OnCodeUpdated()
    {
       std::vector<std::string> lines = mCodeEntry->GetLines(false);
 
-      for (size_t i = 0; i < mBoundModuleConnections.size(); ++i)
+      for (auto mBoundModuleConnection = mBoundModuleConnections.begin(); mBoundModuleConnection != mBoundModuleConnections.end(); ++mBoundModuleConnection)
       {
-         if (mBoundModuleConnections[i].mLineText != lines[mBoundModuleConnections[i].mLineIndex])
+         if (mBoundModuleConnection->mLineIndex >= lines.size())
+         {
+            mBoundModuleConnection = mBoundModuleConnections.erase(mBoundModuleConnection);
+            if (mBoundModuleConnection == mBoundModuleConnections.end())
+               break;
+            continue;
+         }
+         if (mBoundModuleConnection->mLineText != lines[mBoundModuleConnection->mLineIndex])
          {
             bool found = false;
             for (int j = 0; j < (int)lines.size(); ++j)
             {
-               if (lines[j] == mBoundModuleConnections[i].mLineText)
+               if (lines[j] == mBoundModuleConnection->mLineText)
                {
                   found = true;
-                  mBoundModuleConnections[i].mLineIndex = j;
+                  mBoundModuleConnection->mLineIndex = j;
                }
             }
 
             if (!found)
-               mBoundModuleConnections[i].mTarget = nullptr;
+               mBoundModuleConnection->mTarget = nullptr;
          }
       }
    }
@@ -1161,6 +1208,7 @@ std::string ScriptModule::GetThisName()
 std::pair<int, int> ScriptModule::RunScript(double time, int lineStart /*=-1*/, int lineEnd /*=-1*/)
 {
    //should only be called from main thread
+   assert(IsMainThread());
 
    if (!sPythonInitialized)
    {
@@ -1213,7 +1261,7 @@ std::pair<int, int> ScriptModule::RunScript(double time, int lineStart /*=-1*/, 
    return std::make_pair(executionStartLine, executionEndLine);
 }
 
-void ScriptModule::RunCode(double time, std::string code)
+void ScriptModule::RunCode(double time, std::string code, bool hasReturnValue /*= false*/)
 {
    //should only be called from main thread
 
@@ -1237,7 +1285,23 @@ void ScriptModule::RunCode(double time, std::string code)
    try
    {
       FixUpCode(code);
-      py::exec(code, py::globals());
+
+      if (hasReturnValue)
+      {
+         py::object ret = py::eval(code, py::globals());
+
+         py::type returnType = py::type::of(ret);
+         if (py::isinstance<py::bool_>(ret))
+            mLastReturnValueBool = ret.cast<bool>();
+         else if (py::isinstance<py::int_>(ret))
+            mLastReturnValueInt = ret.cast<int>();
+         else if (py::isinstance<py::float_>(ret))
+            mLastReturnValueFloat = ret.cast<float>();
+      }
+      else
+      {
+         py::exec(code, py::globals());
+      }
 
       mCodeEntry->SetError(false);
       mLastError = "";
@@ -1305,6 +1369,9 @@ void ScriptModule::FixUpCode(std::string& code)
    ofStringReplace(code, "on_grid_button(", "on_grid_button__" + prefix + "(");
    ofStringReplace(code, "on_osc(", "on_osc__" + prefix + "(");
    ofStringReplace(code, "on_midi(", "on_midi__" + prefix + "(");
+   ofStringReplace(code, "on_sysex(", "on_sysex__" + prefix + "(");
+   ofStringReplace(code, "on_ableton_grid_control(", "on_ableton_grid_control__" + prefix + "(");
+   ofStringReplace(code, "update_ableton_grid_leds(", "update_ableton_grid_leds__" + prefix + "(");
    ofStringReplace(code, "this.", GetThisName() + ".");
    ofStringReplace(code, "me.", GetThisName() + ".");
 }
@@ -1449,12 +1516,6 @@ void ScriptModule::Reset()
 
    for (size_t i = 0; i < mPrintDisplay.size(); ++i)
       mPrintDisplay[i].time = -1;
-}
-
-void ScriptModule::GetModuleDimensions(float& w, float& h)
-{
-   w = mWidth;
-   h = mHeight;
 }
 
 void ScriptModule::Resize(float w, float h)
@@ -1640,6 +1701,7 @@ void ScriptModule::LineEventTracker::Draw(CodeEntry* codeEntry, int style, ofCol
 }
 
 ScriptReferenceDisplay::ScriptReferenceDisplay()
+: IDrawableModule(750, 335)
 {
    LoadText();
 }
@@ -1684,12 +1746,6 @@ bool ScriptReferenceDisplay::MouseScrolled(float x, float y, float scrollX, floa
 {
    mScrollOffset.y = ofClamp(mScrollOffset.y - scrollY * 10, 0, mMaxScrollAmount);
    return true;
-}
-
-void ScriptReferenceDisplay::GetModuleDimensions(float& w, float& h)
-{
-   w = mWidth;
-   h = mHeight;
 }
 
 void ScriptReferenceDisplay::ButtonClicked(ClickButton* button, double time)

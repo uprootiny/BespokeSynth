@@ -65,7 +65,7 @@ void ControlSequencer::CreateUIControls()
    CHECKBOX(mRecordCheckbox, "record", &mRecord);
    ENDUIBLOCK(width, height);
 
-   mGrid = new UIGrid("uigrid", 5, height + 3, mRandomize->GetRect().getMaxX() - 6, 40, mLength, 1, this);
+   mGrid = new UIGrid(this, "uigrid", 5, height + 3, mRandomize->GetRect().getMaxX() - 6, 40, mLength, 1);
 
    UIBLOCK(15, height + 5);
    for (int i = 0; i < (int)mStepSliders.size(); ++i)
@@ -283,7 +283,7 @@ void ControlSequencer::PostRepatch(PatchCableSource* cableSource, bool fromUserC
          mTargets[i] = nullptr;
    }
 
-   if (wasEmpty && mControlCable->GetPatchCables().size() == 1)
+   if (wasEmpty && mControlCable->GetPatchCables().size() == 1 && GetUIControl() != nullptr)
    {
       for (int i = 0; i < mGrid->GetCols(); ++i)
          mGrid->SetVal(i, 0, GetUIControl()->GetMidiValue());

@@ -36,10 +36,11 @@
 #include "Checkbox.h"
 #include "RadioButton.h"
 #include "Oscillator.h"
+#include "IControlVisualizer.h"
 
 class ofxJSONElement;
 
-class SingleOscillator : public IAudioSource, public INoteReceiver, public IDrawableModule, public IDropdownListener, public IFloatSliderListener, public IIntSliderListener, public IRadioButtonListener
+class SingleOscillator : public IAudioSource, public INoteReceiver, public IDrawableModule, public IDropdownListener, public IFloatSliderListener, public IIntSliderListener, public IRadioButtonListener, public IControlVisualizer
 {
 public:
    SingleOscillator();
@@ -61,6 +62,9 @@ public:
    //INoteReceiver
    void PlayNote(NoteMessage note) override;
    void SendCC(int control, int value, int voiceIdx = -1) override {}
+
+   //IControlVisualizer
+   void DrawVisualizationToScreen(AbletonMoveLCD* screen, IUIControl* control) override;
 
    void DropdownUpdated(DropdownList* list, int oldVal, double time) override;
    void FloatSliderUpdated(FloatSlider* slider, float oldVal, double time) override;
@@ -84,15 +88,9 @@ private:
    //IDrawableModule
    void DrawModule() override;
    void DrawModuleUnclipped() override;
-   void GetModuleDimensions(float& width, float& height) override
-   {
-      width = mWidth;
-      height = mHeight;
-   }
    void UpdateOldControlName(std::string& oldName) override;
+   float GetDrawValue(float phase);
 
-   float mWidth{ 200 };
-   float mHeight{ 20 };
    PolyphonyMgr mPolyMgr;
    NoteInputBuffer mNoteInputBuffer;
    OscillatorVoiceParams mVoiceParams;

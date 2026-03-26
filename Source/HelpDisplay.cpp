@@ -40,6 +40,7 @@ bool HelpDisplay::sTooltipsLoaded = false;
 std::list<HelpDisplay::ModuleTooltipInfo> HelpDisplay::sTooltips;
 
 HelpDisplay::HelpDisplay()
+: IDrawableModule(700, 700)
 {
    LoadHelp();
 
@@ -120,8 +121,12 @@ void HelpDisplay::DrawModule()
    {
       if (mScreenshotState == ScreenshotState::WaitingForScreenshot)
       {
-         std::string typeName = mScreenshotsToProcess.begin()->mLabel;
-         mScreenshotsToProcess.pop_front();
+         std::string typeName = "type";
+         if (!mScreenshotsToProcess.empty())
+         {
+            typeName = mScreenshotsToProcess.begin()->mLabel;
+            mScreenshotsToProcess.pop_front();
+         }
 
          ofRectangle rect = mScreenshotModule->GetRect();
          rect.y -= IDrawableModule::TitleBarHeight();
@@ -368,19 +373,37 @@ std::string HelpDisplay::GetModuleTooltipFromName(std::string moduleTypeName)
    return moduleTypeName + ": " + tooltip;
 }
 
+//static
+void HelpDisplay::OpenTutorialVideoLink()
+{
+   juce::URL("https://youtu.be/SYBc8X2IxqM").launchInDefaultBrowser();
+}
+
+//static
+void HelpDisplay::OpenDocsLink()
+{
+   juce::URL("http://bespokesynth.com/docs").launchInDefaultBrowser();
+}
+
+//static
+void HelpDisplay::OpenDiscordLink()
+{
+   juce::URL("https://discord.gg/YdTMkvvpZZ").launchInDefaultBrowser();
+}
+
 void HelpDisplay::ButtonClicked(ClickButton* button, double time)
 {
    if (button == mTutorialVideoLinkButton)
    {
-      juce::URL("https://youtu.be/SYBc8X2IxqM").launchInDefaultBrowser();
+      OpenTutorialVideoLink();
    }
    if (button == mDocsLinkButton)
    {
-      juce::URL("http://bespokesynth.com/docs").launchInDefaultBrowser();
+      OpenDocsLink();
    }
    if (button == mDiscordLinkButton)
    {
-      juce::URL("https://discord.gg/YdTMkvvpZZ").launchInDefaultBrowser();
+      OpenDiscordLink();
    }
    if (button == mCopyBuildInfoButton)
    {
@@ -400,10 +423,10 @@ void HelpDisplay::ButtonClicked(ClickButton* button, double time)
          kModuleCategory_Pulse,
          kModuleCategory_Other
       };
-      for (auto type : moduleTypes)
+      for (auto& type : moduleTypes)
       {
          const auto& modules = TheSynth->GetModuleFactory()->GetSpawnableModules(type);
-         for (auto toSpawn : modules)
+         for (auto& toSpawn : modules)
             TheSynth->SpawnModuleOnTheFly(toSpawn, 0, 0);
       }
 
@@ -417,7 +440,7 @@ void HelpDisplay::ButtonClicked(ClickButton* button, double time)
          {
             EffectChain* effectChain = dynamic_cast<EffectChain*>(topLevelModule);
             std::vector<std::string> effects = TheSynth->GetEffectFactory()->GetSpawnableEffects();
-            for (std::string effect : effects)
+            for (auto& effect : effects)
                effectChain->AddEffect(effect, effect, !K(onTheFly));
          }
 
@@ -486,14 +509,14 @@ void HelpDisplay::ButtonClicked(ClickButton* button, double time)
          kModuleCategory_Pulse,
          kModuleCategory_Other
       };
-      for (auto type : moduleTypes)
+      for (auto& type : moduleTypes)
       {
          const auto& modules = TheSynth->GetModuleFactory()->GetSpawnableModules(type);
-         for (auto toSpawn : modules)
+         for (auto& toSpawn : modules)
             mScreenshotsToProcess.push_back(toSpawn);
       }
 
-      for (auto effect : TheSynth->GetEffectFactory()->GetSpawnableEffects())
+      for (auto& effect : TheSynth->GetEffectFactory()->GetSpawnableEffects())
       {
          ModuleFactory::Spawnable spawnable;
          spawnable.mLabel = effect;
@@ -513,10 +536,10 @@ void HelpDisplay::ButtonClicked(ClickButton* button, double time)
       ofxJSONElement docs;
 
       LoadTooltips();
-      for (auto moduleType : sTooltips)
+      for (auto& moduleType : sTooltips)
       {
          docs[moduleType.module]["description"] = moduleType.tooltip;
-         for (auto control : moduleType.controlTooltips)
+         for (auto& control : moduleType.controlTooltips)
          {
             docs[moduleType.module]["controls"][control.controlName] = control.tooltip;
          }
@@ -541,10 +564,10 @@ void HelpDisplay::ButtonClicked(ClickButton* button, double time)
          kModuleCategory_Pulse,
          kModuleCategory_Other
       };
-      for (auto category : moduleCategories)
+      for (auto& category : moduleCategories)
       {
          const auto& modules = TheSynth->GetModuleFactory()->GetSpawnableModules(category);
-         for (auto toSpawn : modules)
+         for (auto& toSpawn : modules)
          {
             IDrawableModule* module = TheSynth->SpawnModuleOnTheFly(toSpawn, 100, 300);
 
@@ -571,7 +594,7 @@ void HelpDisplay::ButtonClicked(ClickButton* button, double time)
          }
       }
 
-      for (auto effect : TheSynth->GetEffectFactory()->GetSpawnableEffects())
+      for (auto& effect : TheSynth->GetEffectFactory()->GetSpawnableEffects())
          docs[effect]["type"] = "effect chain";
 
       docs.save(ofToDataPath("module_documentation.json"), true);
@@ -581,10 +604,13 @@ void HelpDisplay::ButtonClicked(ClickButton* button, double time)
 void HelpDisplay::ScreenshotModule(IDrawableModule* module)
 {
    mScreenshotModule = module;
+   mScreenshotState = ScreenshotState::WaitingForScreenshot;
 }
 
 void HelpDisplay::RenderScreenshot(int x, int y, int width, int height, std::string filename)
 {
+   assert(IsRenderThread());
+
    float scale = gDrawScale * TheSynth->GetPixelRatio();
    x = (x + TheSynth->GetDrawOffset().x) * scale;
    y = (y + TheSynth->GetDrawOffset().y) * scale;

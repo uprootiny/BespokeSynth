@@ -29,13 +29,22 @@
 #include "VSTPlugin.h"
 #include "Prefab.h"
 #include "HelpDisplay.h"
-#include "nanovg/nanovg.h"
 #include "UserPrefsEditor.h"
 #include "Canvas.h"
 #include "EffectChain.h"
 #include "ClickButton.h"
 #include "UserPrefs.h"
 #include "NoteOutputQueue.h"
+#include "WelcomeScreen.h"
+#include "TrackOrganizer.h"
+
+#include "juce_opengl/juce_opengl.h"
+using namespace juce::gl;
+
+#include "nanovg/nanovg.h"
+#define NANOVG_GLES2_IMPLEMENTATION
+#include "nanovg/nanovg_gl.h"
+#include "nanovg/nanovg_gl_utils.h"
 
 #include "juce_audio_processors/juce_audio_processors.h"
 #include "juce_audio_formats/juce_audio_formats.h"
@@ -63,7 +72,9 @@ float ModularSynth::sBackgroundB = 0.09f;
 float ModularSynth::sCableAlpha = 1.0f;
 int ModularSynth::sLoadingFileSaveStateRev = ModularSynth::kSaveStateRev;
 int ModularSynth::sLastLoadedFileSaveStateRev = ModularSynth::kSaveStateRev;
+std::thread::id ModularSynth::sMainThreadId;
 std::thread::id ModularSynth::sAudioThreadId;
+std::thread::id ModularSynth::sRenderThreadId;
 
 #if BESPOKE_WINDOWS
 LONG WINAPI TopLevelExceptionHandler(PEXCEPTION_POINTERS pExceptionInfo);
@@ -254,6 +265,9 @@ void ModularSynth::Setup(juce::AudioDeviceManager* globalAudioDeviceManager, juc
    TheScale->Init();
    TheTransport->Init();
 
+   if (juce::File(GetWorkspaceDataPath()).existsAsFile())
+      mWorkspaceData.open(TheSynth->GetWorkspaceDataPath());
+
    DrumPlayer::SetUpHitDirectories();
 
    sBackgroundLissajousR = UserPrefs.lissajous_r.Get();
@@ -279,10 +293,8 @@ void ModularSynth::Setup(juce::AudioDeviceManager* globalAudioDeviceManager, juc
    mConsoleEntry->SetRequireEnter(true);
 }
 
-void ModularSynth::LoadResources(void* nanoVG, void* fontBoundsNanoVG)
+void ModularSynth::LoadResources()
 {
-   gNanoVG = (NVGcontext*)nanoVG;
-   gFontBoundsNanoVG = (NVGcontext*)fontBoundsNanoVG;
    LoadGlobalResources();
 
    if (!gFont.IsLoaded())
@@ -297,7 +309,7 @@ void ModularSynth::InitIOBuffers(int inputChannelCount, int outputChannelCount)
       mOutputBuffers.push_back(new float[gBufferSize]);
 }
 
-
+//static
 std::string ModularSynth::GetUserPrefsPath()
 {
    std::string filename = "userprefs.json";
@@ -316,9 +328,21 @@ std::string ModularSynth::GetUserPrefsPath()
    return ofToDataPath(filename);
 }
 
+//static
+std::string ModularSynth::GetWorkspaceDataPath()
+{
+   std::string filename = "workspace.json";
+   return ofToDataPath(filename);
+}
+
 static int sFrameCount = 0;
 void ModularSynth::Poll()
 {
+   sMainThreadId = std::this_thread::get_id();
+
+   if (mQueuedSaveStateInfo.mQueued && !mQueuedSaveStateInfo.mWaitingForScreenshot)
+      CompleteQueuedSaveState();
+
    if (mFatalError == "")
    {
       if (!mInitialized && sFrameCount > 3) //let some frames render before blocking for a load
@@ -373,7 +397,7 @@ void ModularSynth::Poll()
       {
          if (GetKeyModifiers() == kModifier_Shift)
             desiredCursor = MouseCursor::CrosshairCursor;
-         else if (dynamic_cast<FloatSlider*>(gHoveredUIControl) != nullptr && dynamic_cast<FloatSlider*>(gHoveredUIControl)->GetModulator() != nullptr && dynamic_cast<FloatSlider*>(gHoveredUIControl)->GetModulator()->Active())
+         else if (gHoveredUIControl->GetModulator() != nullptr && gHoveredUIControl->GetModulator()->Active())
             desiredCursor = MouseCursor::UpDownLeftRightResizeCursor;
          else
             desiredCursor = MouseCursor::LeftRightResizeCursor;
@@ -498,9 +522,9 @@ void ModularSynth::PanTo(float x, float y)
    mHideTooltipsUntilMouseMove = true;
 }
 
-void ModularSynth::Draw(void* vg)
+void ModularSynth::Draw()
 {
-   gNanoVG = (NVGcontext*)vg;
+   sRenderThreadId = std::this_thread::get_id();
 
    ofNoFill();
 
@@ -860,6 +884,37 @@ void ModularSynth::Draw(void* vg)
    }
    ofPopStyle();
 
+   /*if (mScreenshotPixels)
+   {
+      ofPushMatrix();
+      // get to screen space
+      //ofTranslate(-GetPosition().x, -GetPosition().y);
+      //ofTranslate(-TheSynth->GetDrawOffset().x, -TheSynth->GetDrawOffset().y);
+      //ofScale(1 / gDrawScale, 1 / gDrawScale, 1 / gDrawScale);
+
+      ofPushStyle();
+      ofFill();
+      const float kScreenshotPreviewX = 30;
+      const float kScreenshotPreviewY = 500;
+      const float kScreenshotPreviewPixelW = 1;
+      const float kScreenshotPreviewPixelH = 1;
+      const float kPixelSpacing = 0;
+      ofSetColor(255, 255, 255);
+      ofRect(kScreenshotPreviewX - 1, kScreenshotPreviewY - WelcomeScreen::kScreenshotHeight * kScreenshotPreviewPixelH, WelcomeScreen::kScreenshotWidth * kScreenshotPreviewPixelW + 2, WelcomeScreen::kScreenshotHeight * kScreenshotPreviewPixelH + 2, 0);
+      for (int col = 0; col < WelcomeScreen::kScreenshotWidth; ++col)
+      {
+         for (int row = 0; row < WelcomeScreen::kScreenshotHeight; ++row)
+         {
+            int index = (col + row * WelcomeScreen::kScreenshotWidth) * 3;
+            ofSetColor(mScreenshotPixels[index + 0], mScreenshotPixels[index + 1], mScreenshotPixels[index + 2], 255);
+            ofRect(kScreenshotPreviewX + kScreenshotPreviewPixelW * col, kScreenshotPreviewY - kScreenshotPreviewPixelH * row, kScreenshotPreviewPixelW - kPixelSpacing, kScreenshotPreviewPixelH - kPixelSpacing, 0);
+         }
+      }
+      ofPopStyle();
+
+      ofPopMatrix();
+   }*/
+
    ++mFrameCount;
 }
 
@@ -867,6 +922,81 @@ void ModularSynth::PostRender()
 {
    mModuleContainer.PostRender();
    mUILayerModuleContainer.PostRender();
+
+   if (mQueuedSaveStateInfo.mQueued && mQueuedSaveStateInfo.mWaitingForScreenshot)
+   {
+      if (mScreenshotFrameBuffer == nullptr)
+      {
+         mScreenshotFrameBuffer = nvgluCreateFramebuffer(gNanoVGRenderContexts[(int)NanoVGRenderContext::Screenshot], WelcomeScreen::kScreenshotWidth, WelcomeScreen::kScreenshotHeight, 0);
+         assert(mScreenshotFrameBuffer);
+
+         mScreenshotPixels = new unsigned char[WelcomeScreen::kScreenshotWidth * WelcomeScreen::kScreenshotHeight * 3];
+      }
+
+      if (mScreenshotFrameBuffer != nullptr)
+      {
+         gNanoVG = gNanoVGRenderContexts[(int)NanoVGRenderContext::Screenshot];
+
+         int fboWidth, fboHeight;
+         nvgImageSize(gNanoVG, mScreenshotFrameBuffer->image, &fboWidth, &fboHeight);
+         int winWidth = (int)(fboWidth / 1);
+         int winHeight = (int)(fboHeight / 1);
+
+         nvgluBindFramebuffer(mScreenshotFrameBuffer);
+         glViewport(0, 0, fboWidth, fboHeight);
+         glClearColor(sBackgroundR, sBackgroundG, sBackgroundB, 0);
+         glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+         nvgBeginFrame(gNanoVG, winWidth, winHeight, 1);
+
+         ofPushStyle();
+         ofPushMatrix();
+
+         ofRectangle allModulesRect = TheTransport->GetRect(); // just picking a random module
+         std::vector<IDrawableModule*> allModules;
+         TheSynth->GetRootContainer()->GetAllModules(allModules);
+         for (auto* module : allModules)
+         {
+            if (module != nullptr && !module->IsDeleted() &&
+                module->GetOwningContainer() != nullptr && module->IsShowing())
+            {
+               ofRectangle rect = module->GetRect();
+
+               if (module->HasTitleBar())
+               {
+                  rect.y -= IDrawableModule::TitleBarHeight();
+                  rect.height += IDrawableModule::TitleBarHeight();
+               }
+
+               allModulesRect = ofRectangle::include(allModulesRect, rect);
+            }
+         }
+
+         allModulesRect.grow(15);
+
+         float screenScale = MIN(WelcomeScreen::kScreenshotWidth / allModulesRect.width, WelcomeScreen::kScreenshotHeight / allModulesRect.height);
+         ofScale(screenScale, screenScale, screenScale);
+         float xShift = allModulesRect.width / 2 + MAX(0, (allModulesRect.height - allModulesRect.width) * screenScale * 2);
+         float yShift = allModulesRect.height / 2 + MAX(0, (allModulesRect.width - allModulesRect.height) * screenScale * 2);
+         ofTranslate(-allModulesRect.getCenter().x + xShift, -allModulesRect.getCenter().y + yShift);
+
+         TheSynth->GetRootContainer()->DrawContents();
+
+         ofPopMatrix();
+         ofPopStyle();
+
+         nvgEndFrame(gNanoVG);
+
+         glFinish();
+         glReadBuffer(GL_COLOR_ATTACHMENT0);
+         glReadPixels(0, 0, winWidth, winHeight, GL_RGB, GL_UNSIGNED_BYTE, mScreenshotPixels);
+
+         nvgluBindFramebuffer(nullptr);
+
+         gNanoVG = gNanoVGRenderContexts[(int)NanoVGRenderContext::Main];
+      }
+
+      mQueuedSaveStateInfo.mWaitingForScreenshot = false;
+   }
 }
 
 void ModularSynth::DrawConsole()
@@ -1207,6 +1337,13 @@ bool ModularSynth::ShouldShowGridSnap() const
    return (mMoveModule || (!mGroupSelectedModules.empty() && IsMouseButtonHeld(1))) && (GetKeyModifiers() & kModifier_Command);
 }
 
+void ModularSynth::SetGroupSelectedModules(std::list<IDrawableModule*> modules)
+{
+   mGroupSelectedModules.clear();
+   for (auto* module : modules)
+      mGroupSelectedModules.push_back(module);
+}
+
 void ModularSynth::MouseMoved(int intX, int intY)
 {
    bool changed = (mMousePos.x != intX || mMousePos.y != intY);
@@ -1391,6 +1528,7 @@ void ModularSynth::MouseDragged(int intX, int intY, int button, const juce::Mous
    {
       std::vector<IDrawableModule*> newGroupSelectedModules;
       std::map<IDrawableModule*, IDrawableModule*> oldToNewModuleMap;
+      std::map<IDrawableModule*, IDrawableModule*> newToOldModuleMap;
       for (auto module : mGroupSelectedModules)
       {
          if (!module->IsSingleton())
@@ -1398,24 +1536,154 @@ void ModularSynth::MouseDragged(int intX, int intY, int button, const juce::Mous
             IDrawableModule* newModule = DuplicateModule(module);
             newGroupSelectedModules.push_back(newModule);
             oldToNewModuleMap[module] = newModule;
+            newToOldModuleMap[newModule] = module;
 
             if (module == mLastClickedModule)
                mLastClickedModule = newModule;
          }
       }
-      for (auto module : newGroupSelectedModules)
+      auto updateCables = [&oldToNewModuleMap, &newToOldModuleMap](PatchCableSource* cableSource, PatchCable* cable)
       {
+         if (cable->GetTarget() == nullptr) // The duplicated cable has no target, so we need to check the original module cables to see if it should have a target.
+         {
+            // Acquire cable index
+            auto allCables = cableSource->GetPatchCables();
+            int cableIndex = -1;
+            for (auto i = 0; i < static_cast<int>(allCables.size()); i++)
+            {
+               if (allCables[i] == cable)
+               {
+                  cableIndex = i;
+                  break;
+               }
+            }
+            if (cableIndex == -1)
+               return;
+            // Try to find a parent module that is in the duplicated module list
+            IClickable* temp_module{ nullptr };
+            temp_module = dynamic_cast<IClickable*>(cableSource->GetModulatorOwner());
+            if (temp_module == nullptr)
+               temp_module = dynamic_cast<IClickable*>(cableSource->GetOwner());
+            if (temp_module == nullptr)
+               temp_module = cableSource->GetParent();
+            if (temp_module == nullptr)
+               return;
+            IDrawableModule *oldmodule{ nullptr }, *newmodule{ nullptr };
+            for (int i = 0; i < 10; i++) // Limit to 10 iterations to avoid infinite loops
+            {
+               newmodule = dynamic_cast<IDrawableModule*>(temp_module);
+               oldmodule = newToOldModuleMap[newmodule];
+               if (oldmodule != nullptr && newmodule != nullptr)
+                  break;
+               temp_module = temp_module->GetParent();
+               if (!temp_module)
+                  break;
+            }
+            if (oldmodule == nullptr || newmodule == nullptr)
+               return;
+            // Acquire cable source index
+            int cableSourceIndex = -1;
+            for (auto i = 0; i < newmodule->GetPatchCableSources().size(); i++)
+            {
+               if (newmodule->GetPatchCableSources()[i] == cableSource)
+               {
+                  cableSourceIndex = i;
+                  break;
+               }
+            }
+            if (cableSourceIndex == -1)
+               return;
+            // See if we have a target in the orignal module
+            auto oldCableSource = oldmodule->GetPatchCableSources()[cableSourceIndex];
+            if (oldCableSource == nullptr)
+               return;
+            auto oldCable = oldCableSource->GetPatchCables()[cableIndex];
+            if (oldCable == nullptr)
+               return;
+            if (oldCable->GetTarget() == nullptr)
+               return;
+            // Try to find a parent module that is in the duplicated module list
+            temp_module = oldCable->GetTarget();
+            oldmodule = newmodule = nullptr;
+            for (int i = 0; i < 10; i++) // Limit to 10 iterations to avoid infinite loops
+            {
+               oldmodule = dynamic_cast<IDrawableModule*>(temp_module);
+               newmodule = oldToNewModuleMap[oldmodule];
+               if (oldmodule != nullptr && newmodule != nullptr)
+                  break;
+               temp_module = temp_module->GetParent();
+               if (!temp_module)
+                  break;
+            }
+            if (oldmodule == nullptr || newmodule == nullptr)
+               return;
+            // Transform the old path to new path so we acquire our new target
+            auto oldpath = oldmodule->Path();
+            auto newpath = newmodule->Path();
+            auto targetpath = oldCable->GetTarget()->Path();
+            ofStringReplace(targetpath, oldpath, newpath, true);
+            IClickable* newtarget = TheSynth->FindUIControl(targetpath);
+            if (newtarget == nullptr)
+               newtarget = TheSynth->FindModule(targetpath);
+            if (newtarget == nullptr)
+               return;
+            // Set the new target
+            cableSource->SetPatchCableTarget(cable, newtarget, false);
+            auto modulationOwner = cableSource->GetModulatorOwner();
+            if (modulationOwner)
+               modulationOwner->OnModulatorRepatch();
+            return;
+         } // The duplicated cable has a target, so we need to update it
+         // Try to find a parent module that is in the duplicated module list
+         auto temp_module = cable->GetTarget();
+         IDrawableModule *oldmodule, *newmodule;
+         for (int i = 0; i < 10; i++)
+         {
+            oldmodule = dynamic_cast<IDrawableModule*>(temp_module);
+            newmodule = oldToNewModuleMap[oldmodule];
+            if (oldmodule != nullptr && newmodule != nullptr)
+               break;
+            temp_module = temp_module->GetParent();
+            if (!temp_module)
+               break;
+         }
+         if (oldmodule == nullptr || newmodule == nullptr)
+            return;
+         // Find the new target using the path
+         auto oldpath = oldmodule->Path();
+         auto newpath = newmodule->Path();
+         auto targetpath = cable->GetTarget()->Path();
+         ofStringReplace(targetpath, oldpath, newpath, true);
+         IClickable* newtarget = TheSynth->FindUIControl(targetpath);
+         if (newtarget == nullptr)
+            newtarget = TheSynth->FindModule(targetpath);
+         if (newtarget == nullptr)
+            return;
+         // Set the new target
+         cableSource->SetPatchCableTarget(cable, newtarget, false);
+         auto modulationOwner = cableSource->GetModulatorOwner();
+         if (modulationOwner)
+            modulationOwner->OnModulatorRepatch();
+      };
+      std::function<void(IDrawableModule*)> checkModuleCables =
+      [&updateCables, &checkModuleCables](IDrawableModule* module)
+      {
+         auto mod = dynamic_cast<IModulator*>(module);
          for (auto* cableSource : module->GetPatchCableSources())
          {
             for (auto* cable : cableSource->GetPatchCables())
             {
-               if (VectorContains(dynamic_cast<IDrawableModule*>(cable->GetTarget()), mGroupSelectedModules))
-               {
-                  cableSource->SetPatchCableTarget(cable, oldToNewModuleMap[dynamic_cast<IDrawableModule*>(cable->GetTarget())], false);
-               }
+               updateCables(cableSource, cable);
             }
          }
-      }
+         for (const auto child : module->GetChildren())
+         {
+            checkModuleCables(child); // Check children (Prefabs for instance.)
+         }
+      };
+      for (const auto module : newGroupSelectedModules)
+         checkModuleCables(module);
+
       mGroupSelectedModules = newGroupSelectedModules;
 
       if (mMoveModule && !mMoveModule->IsSingleton())
@@ -1717,7 +1985,7 @@ void ModularSynth::MouseScrolled(float xScroll, float yScroll, bool isSmoothScro
       if (canZoomCanvas)
          ZoomView(yScroll / 50, true);
    }
-   else if (gHoveredUIControl)
+   else if (gHoveredUIControl && dynamic_cast<ClickButton*>(gHoveredUIControl) == nullptr)
    {
 #if JUCE_WINDOWS
       yScroll += xScroll / 4; //taking advantage of logitech horizontal scroll wheel
@@ -1747,9 +2015,24 @@ void ModularSynth::MouseScrolled(float xScroll, float yScroll, bool isSmoothScro
 
       float val = gHoveredUIControl->GetMidiValue();
       float movementScale = 3;
-      FloatSlider* floatSlider = dynamic_cast<FloatSlider*>(gHoveredUIControl);
-      IntSlider* intSlider = dynamic_cast<IntSlider*>(gHoveredUIControl);
-      ClickButton* clickButton = dynamic_cast<ClickButton*>(gHoveredUIControl);
+      const auto floatSlider = dynamic_cast<FloatSlider*>(gHoveredUIControl);
+      const auto intSlider = dynamic_cast<IntSlider*>(gHoveredUIControl);
+      const auto clickButton = dynamic_cast<ClickButton*>(gHoveredUIControl);
+      const auto dropDownList = dynamic_cast<DropdownList*>(gHoveredUIControl);
+
+      if (dropDownList)
+      {
+         auto increment = (yScroll > 0 ? 1. : -1.) / dropDownList->GetNumValues();
+         if (GetKeyModifiers() & kModifier_Shift)
+            increment *= 3 * UserPrefs.scroll_multiplier_vertical.Get();
+         if (gHoveredUIControl->InvertScrollDirection())
+            increment *= -1;
+         auto value = dropDownList->GetMidiValue();
+         value += increment;
+         dropDownList->SetFromMidiCC(value, NextBufferTime(false), false);
+         return;
+      }
+
       if (floatSlider || intSlider)
       {
          float w, h;
@@ -2446,6 +2729,18 @@ void ModularSynth::ResetLayout()
       mUserPrefsEditor->Show();
       TheTitleBar->SetShowing(false);
    }
+   else
+   {
+      mWelcomeScreen = new WelcomeScreen();
+      mWelcomeScreen->SetName("welcome");
+      mWelcomeScreen->CreateUIControls();
+      mWelcomeScreen->Init();
+      if (!mIsLoadingState && sFrameCount < 10 && UserPrefs.show_welcome_screen.Get())
+         mWelcomeScreen->Show();
+      else
+         mWelcomeScreen->SetShowing(false);
+      mModuleContainer.AddModule(mWelcomeScreen);
+   }
 
    GetDrawOffset().set(0, 0);
 
@@ -2849,11 +3144,19 @@ void ModularSynth::SaveStatePopup()
    File targetFile;
    String savestateDirPath = ofToDataPath("savestate/");
    String templateName = "";
-   String date = ofGetTimestampString("%Y-%m-%d_%H-%M");
+   String date = ofGetTimestampString("%Y-%m-%d");
    if (IsCurrentSaveStateATemplate())
       templateName = File(mCurrentSaveStatePath).getFileNameWithoutExtension().toStdString() + "_";
 
-   targetFile = File(savestateDirPath + templateName + date + ".bsk");
+   int counter = 0;
+   do
+   {
+      if (counter == 0)
+         targetFile = File(savestateDirPath + templateName + date + ".bsk");
+      else
+         targetFile = File(savestateDirPath + templateName + date + "_" + ofToString(counter) + ".bsk");
+      ++counter;
+   } while (targetFile.existsAsFile());
 
    FileChooser chooser("Save current state as...", targetFile, "*.bsk", true, false, GetFileChooserParent());
    if (chooser.browseForFileToSave(true))
@@ -2874,6 +3177,20 @@ void ModularSynth::LoadStatePopupImp()
 
 void ModularSynth::SaveState(std::string file, bool autosave)
 {
+   AddRecentFile(file, true);
+
+   mQueuedSaveStateInfo.mFile = file;
+   mQueuedSaveStateInfo.mAutosave = autosave;
+   mQueuedSaveStateInfo.mWaitingForScreenshot = true;
+   mQueuedSaveStateInfo.mQueued = true;
+}
+
+void ModularSynth::CompleteQueuedSaveState()
+{
+   std::string file = mQueuedSaveStateInfo.mFile;
+   bool autosave = mQueuedSaveStateInfo.mAutosave;
+   mQueuedSaveStateInfo.mQueued = false;
+
    if (!autosave)
    {
       mCurrentSaveStatePath = file;
@@ -2884,14 +3201,44 @@ void ModularSynth::SaveState(std::string file, bool autosave)
 
    mAudioThreadMutex.Lock("SaveState()");
 
+   mZoomer.WriteCurrentLocation(-1);
+
    //write to a temp file first, so we don't corrupt data if we crash mid-save
    std::string tmpFilePath = ofToDataPath("tmp");
 
    {
       FileStreamOut out(tmpFilePath);
 
-      mZoomer.WriteCurrentLocation(-1);
+      out << std::string("bskfile");
+      out << kSaveStateRev;
+
+      if (mScreenshotPixels != nullptr)
+      {
+         juce::Image image(juce::Image::RGB, WelcomeScreen::kScreenshotWidth, WelcomeScreen::kScreenshotHeight, true);
+         for (int ix = 0; ix < WelcomeScreen::kScreenshotWidth; ++ix)
+         {
+            for (int iy = 0; iy < WelcomeScreen::kScreenshotHeight; ++iy)
+            {
+               int pos = (ix + (WelcomeScreen::kScreenshotHeight - 1 - iy) * WelcomeScreen::kScreenshotWidth) * 3;
+               image.setPixelAt(ix, iy, juce::Colour(mScreenshotPixels[pos], mScreenshotPixels[pos + 1], mScreenshotPixels[pos + 2]));
+            }
+         }
+         juce::MemoryOutputStream stream;
+         juce::PNGImageFormat pngWriter;
+         pngWriter.writeImageToStream(image, stream);
+
+         int screenshotSize = (int)stream.getDataSize();
+         out << screenshotSize;
+         out.WriteGeneric(stream.getData(), screenshotSize);
+      }
+      else
+      {
+         int screenshotSize = 0;
+         out << screenshotSize;
+      }
+
       out << GetLayout().getRawString(true);
+
       mModuleContainer.SaveState(out);
       mUILayerModuleContainer.SaveState(out);
    }
@@ -2908,6 +3255,30 @@ void ModularSynth::SetStartupSaveStateFile(std::string bskPath)
    mStartupSaveStateFile = std::move(bskPath);
 }
 
+void ModularSynth::AddRecentFile(std::string file, bool saved)
+{
+   if (mWorkspaceData["recent_files"].isArray())
+   {
+      for (int i = 0; i < mWorkspaceData["recent_files"].size(); ++i)
+      {
+         if (mWorkspaceData["recent_files"][i]["file"] == file)
+         {
+            mWorkspaceData["recent_files"].removeIndex(i, nullptr);
+            break;
+         }
+      }
+
+      while (mWorkspaceData["recent_files"].size() > 10)
+         mWorkspaceData["recent_files"].removeIndex(0, nullptr);
+   }
+   ofxJSONElement fileInfo;
+   fileInfo["file"] = file;
+   fileInfo["time"] = juce::Time::getCurrentTime().toISO8601(true).toStdString();
+   fileInfo["saved"] = saved;
+   mWorkspaceData["recent_files"].append(fileInfo);
+   mWorkspaceData.save(GetWorkspaceDataPath());
+}
+
 void ModularSynth::LoadState(std::string file)
 {
    ofLog() << "LoadState() " << file;
@@ -2917,6 +3288,8 @@ void ModularSynth::LoadState(std::string file)
       LogEvent("couldn't find file " + file, kLogEventType_Error);
       return;
    }
+
+   AddRecentFile(file, false);
 
    if (mInitialized)
       TitleBar::sShowInitialHelpOverlay = false; //don't show initial help popup
@@ -2936,17 +3309,13 @@ void ModularSynth::LoadState(std::string file)
    LockRender(false);
    mAudioThreadMutex.Unlock();
 
-   //TODO(Ryan) here's a little hack to allow older BSK files that were saved in 32-bit to load.
-   //I guess this could bite me if someone ever has a very massive json. the number corresponds to a long-standing sanity check in FileStreamIn::operator>>(std::string &var), so this shouldn't break any current behavior.
-   //this should definitely be removed if anything about the structure of the BSK format changes.
-   uint64_t firstLength[1];
-   in.Peek(firstLength, sizeof(uint64_t));
-   if (firstLength[0] >= FileStreamIn::sMaxStringLength)
-      FileStreamIn::s32BitMode = true;
+   unsigned char* screenshotData = nullptr;
+   int screenshotSize = 0;
+   std::string jsonLayoutString;
 
-   std::string jsonString;
-   in >> jsonString;
-   bool layoutLoaded = LoadLayoutFromString(jsonString);
+   LoadStateHeader(in, screenshotData, screenshotSize, jsonLayoutString);
+
+   bool layoutLoaded = LoadLayoutFromString(jsonLayoutString);
 
    if (layoutLoaded)
    {
@@ -2972,6 +3341,47 @@ void ModularSynth::LoadState(std::string file)
    mIsLoadingState = false;
    LockRender(false);
    mAudioThreadMutex.Unlock();
+}
+
+//static
+void ModularSynth::LoadStateHeader(FileStreamIn& in, unsigned char*& screenshotData, int& screenshotSize, std::string& jsonLayoutString)
+{
+   // here's a little hack to allow older BSK files that were saved in 32-bit to load.
+   uint64_t firstLength[1];
+   in.Peek(firstLength, sizeof(uint64_t));
+   if (firstLength[0] >= FileStreamIn::sMaxStringLength)
+      FileStreamIn::s32BitMode = true;
+
+   std::string headerString;
+   in >> headerString;
+
+   if (headerString == "bskfile")
+   {
+      int fileRev;
+      in >> fileRev;
+      assert(fileRev <= ModularSynth::kSaveStateRev);
+      ModularSynth::sLoadingFileSaveStateRev = fileRev;
+      ModularSynth::sLastLoadedFileSaveStateRev = fileRev;
+
+      in >> screenshotSize;
+      if (screenshotSize > 0)
+      {
+         screenshotData = new unsigned char[screenshotSize];
+         in.ReadGeneric(screenshotData, screenshotSize);
+      }
+      else
+      {
+         screenshotData = nullptr;
+      }
+
+      in >> jsonLayoutString;
+   }
+   else
+   {
+      screenshotSize = 0;
+      screenshotData = nullptr;
+      jsonLayoutString = headerString;
+   }
 }
 
 bool ModularSynth::IsCurrentSaveStateATemplate() const
@@ -3164,6 +3574,30 @@ void ModularSynth::OnConsoleInput(std::string command /* = "" */)
       {
          DumpStats(false, nullptr);
       }
+      else if (tokens[0] == "welcomescreen")
+      {
+         mWelcomeScreen->Show();
+      }
+      else if (tokens[0] == "dump" && tokens.size() >= 2)
+      {
+         IDrawableModule* module = mModuleContainer.FindModule(tokens[1]);
+         if (module)
+         {
+            FileOutputStream output(File(ofToDataPath("dump_" + tokens[1] + "_" + ofGetTimestampString("%Y-%m-%d_%H-%M") + ".txt")));
+
+            if (output.openedOk())
+            {
+               output.setNewLineString("\n");
+
+               std::string param = "";
+               if (tokens.size() >= 3)
+                  param = tokens[2];
+               module->DumpDebugData(param, output);
+
+               output.flush();
+            }
+         }
+      }
       else
       {
          ofLog() << "Creating: " << mConsoleText;
@@ -3200,7 +3634,7 @@ void ModularSynth::DoAutosave()
 
    juce::File parentDirectory(ofToDataPath("savestate/autosave"));
    Array<juce::File> autosaveFiles;
-   parentDirectory.findChildFiles(autosaveFiles, juce::File::findFiles, false, "*.bsk");
+   parentDirectory.findChildFiles(autosaveFiles, juce::File::findFiles, false, "*.bsk;*.bskt");
    if (autosaveFiles.size() >= kMaxAutosaveSlots)
    {
       FileTimeComparator cmp;
@@ -3209,7 +3643,7 @@ void ModularSynth::DoAutosave()
          autosaveFiles[i].deleteFile();
    }
 
-   SaveState(ofToDataPath(ofGetTimestampString("savestate/autosave/autosave_%Y-%m-%d_%H-%M-%S.bsk")), true);
+   SaveState(ofToDataPath(ofGetTimestampString("savestate/autosave/autosave_%Y-%m-%d_%H-%M-%S.bskt")), true);
 }
 
 IDrawableModule* ModularSynth::SpawnModuleOnTheFly(ModuleFactory::Spawnable spawnable, float x, float y, bool addToContainer, std::string name)
@@ -3224,20 +3658,26 @@ IDrawableModule* ModularSynth::SpawnModuleOnTheFly(ModuleFactory::Spawnable spaw
 
    moduleType = ModuleFactory::FixUpTypeName(moduleType);
 
-   if (spawnable.mSpawnMethod == ModuleFactory::SpawnMethod::EffectChain)
-      moduleType = "effectchain";
-
-   if (spawnable.mSpawnMethod == ModuleFactory::SpawnMethod::Prefab)
-      moduleType = "prefab";
-
-   if (spawnable.mSpawnMethod == ModuleFactory::SpawnMethod::Plugin)
-      moduleType = "vstplugin";
-
-   if (spawnable.mSpawnMethod == ModuleFactory::SpawnMethod::MidiController)
-      moduleType = "midicontroller";
-
-   if (spawnable.mSpawnMethod == ModuleFactory::SpawnMethod::Preset)
-      moduleType = spawnable.mPresetModuleType;
+   switch (spawnable.mSpawnMethod)
+   {
+      case ModuleFactory::SpawnMethod::Module:
+         break;
+      case ModuleFactory::SpawnMethod::EffectChain:
+         moduleType = "effectchain";
+         break;
+      case ModuleFactory::SpawnMethod::Prefab:
+         moduleType = "prefab";
+         break;
+      case ModuleFactory::SpawnMethod::Plugin:
+         moduleType = "vstplugin";
+         break;
+      case ModuleFactory::SpawnMethod::MidiController:
+         moduleType = "midicontroller";
+         break;
+      case ModuleFactory::SpawnMethod::Preset:
+         moduleType = spawnable.mPresetModuleType;
+         break;
+   }
 
    if (name == "")
       name = moduleType;
@@ -3273,42 +3713,69 @@ IDrawableModule* ModularSynth::SpawnModuleOnTheFly(ModuleFactory::Spawnable spaw
       LogEvent("Error spawning \"" + spawnable.mLabel + "\" on the fly, couldn't find \"" + e.mSearchName + "\"", kLogEventType_Warning);
    }
 
-   if (spawnable.mSpawnMethod == ModuleFactory::SpawnMethod::EffectChain)
+   switch (spawnable.mSpawnMethod)
    {
-      EffectChain* effectChain = dynamic_cast<EffectChain*>(module);
-      if (effectChain != nullptr)
-         effectChain->AddEffect(spawnable.mLabel, spawnable.mLabel, K(onTheFly));
-   }
-
-   if (spawnable.mSpawnMethod == ModuleFactory::SpawnMethod::Prefab)
-   {
-      Prefab* prefab = dynamic_cast<Prefab*>(module);
-      if (prefab != nullptr)
-         prefab->LoadPrefab("prefabs" + GetPathSeparator() + spawnable.mLabel);
-   }
-
-   if (spawnable.mSpawnMethod == ModuleFactory::SpawnMethod::Plugin)
-   {
-      VSTPlugin* plugin = dynamic_cast<VSTPlugin*>(module);
-      if (plugin != nullptr)
-         plugin->SetVST(spawnable.mPluginDesc);
-   }
-
-   if (spawnable.mSpawnMethod == ModuleFactory::SpawnMethod::MidiController)
-   {
-      MidiController* controller = dynamic_cast<MidiController*>(module);
-      if (controller != nullptr)
+      case ModuleFactory::SpawnMethod::EffectChain:
       {
-         controller->GetSaveData().SetString("devicein", spawnable.mLabel);
-         controller->SetUpFromSaveDataBase();
+         EffectChain* effectChain = dynamic_cast<EffectChain*>(module);
+         if (effectChain != nullptr)
+            effectChain->AddEffect(spawnable.mLabel, spawnable.mLabel, K(onTheFly));
       }
+      break;
+
+      case ModuleFactory::SpawnMethod::Prefab:
+      {
+         Prefab* prefab = dynamic_cast<Prefab*>(module);
+         if (prefab != nullptr)
+            prefab->LoadPrefab("prefabs" + GetPathSeparator() + spawnable.mLabel);
+      }
+      break;
+
+      case ModuleFactory::SpawnMethod::Plugin:
+      {
+         VSTPlugin* plugin = dynamic_cast<VSTPlugin*>(module);
+         if (plugin != nullptr)
+            plugin->SetVST(spawnable.mPluginDesc);
+      }
+      break;
+
+      case ModuleFactory::SpawnMethod::MidiController:
+      {
+         MidiController* controller = dynamic_cast<MidiController*>(module);
+         if (controller != nullptr)
+         {
+            controller->GetSaveData().SetString("devicein", spawnable.mLabel);
+            controller->SetUpFromSaveDataBase();
+         }
+      }
+      break;
+
+      case ModuleFactory::SpawnMethod::Preset:
+      {
+         std::string presetFilePath = ofToDataPath("presets/" + spawnable.mPresetModuleType + "/" + spawnable.mLabel);
+         ModuleSaveDataPanel::LoadPreset(module, presetFilePath);
+         module->SetName(GetUniqueName(juce::String(spawnable.mLabel).replace(".preset", "").toStdString(), modules).c_str());
+      }
+      break;
+
+      case ModuleFactory::SpawnMethod::Module:
+      {
+      }
+      break;
    }
 
-   if (spawnable.mSpawnMethod == ModuleFactory::SpawnMethod::Preset)
+   std::vector<IDrawableModule*> allModules;
+   TheSynth->GetAllModules(allModules);
+   for (auto checkModule : allModules)
    {
-      std::string presetFilePath = ofToDataPath("presets/" + spawnable.mPresetModuleType + "/" + spawnable.mLabel);
-      ModuleSaveDataPanel::LoadPreset(module, presetFilePath);
-      module->SetName(GetUniqueName(juce::String(spawnable.mLabel).replace(".preset", "").toStdString(), modules).c_str());
+      TrackOrganizer* trackOrganizer = dynamic_cast<TrackOrganizer*>(checkModule);
+      if (trackOrganizer != nullptr && trackOrganizer->GetBoundingRect().contains(x, y))
+      {
+         std::vector<IDrawableModule*> container;
+         container.push_back(module);
+         trackOrganizer->GatherModules(container);
+         break;
+      }
    }
 
    return module;
@@ -3408,6 +3875,8 @@ void ModularSynth::SetFatalError(std::string error)
          mUserPrefsEditor->Show();
       if (TheTitleBar != nullptr)
          TheTitleBar->SetShowing(false);
+      if (mWelcomeScreen != nullptr)
+         mWelcomeScreen->SetShowing(false);
    }
 }
 

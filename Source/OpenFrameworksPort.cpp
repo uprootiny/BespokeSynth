@@ -57,9 +57,6 @@ ofColor ofColor::magenta(255, 0, 255);
 ofColor ofColor::cyan(0, 255, 255);
 ofColor ofColor::clear(0, 0, 0, 0);
 
-NVGcontext* gNanoVG = nullptr;
-NVGcontext* gFontBoundsNanoVG = nullptr;
-
 std::string ofToSamplePath(const std::string& path)
 {
    if (!path.empty() && (path[0] == '.' || juce::File::isAbsolutePath(path)))
@@ -213,7 +210,7 @@ void ofResetClipWindow()
 void ofSetColor(float r, float g, float b, float a)
 {
    sStyleStack.GetStyle().color = ofColor(r, g, b, a);
-   if (Push2Control::sDrawingPush2Display)
+   if (gNanoVG != gNanoVGRenderContexts[(int)NanoVGRenderContext::Main])
    {
       nvgStrokeColor(gNanoVG, nvgRGBA(r, g, b, a));
       nvgFillColor(gNanoVG, nvgRGBA(r, g, b, a));
@@ -232,7 +229,7 @@ void ofSetColor(float r, float g, float b, float a)
 void ofSetColorGradient(const ofColor& colorA, const ofColor& colorB, ofVec2f gradientStart, ofVec2f gradientEnd)
 {
    sStyleStack.GetStyle().color = colorA;
-   if (Push2Control::sDrawingPush2Display)
+   if (gNanoVG != gNanoVGRenderContexts[(int)NanoVGRenderContext::Main])
    {
       nvgStrokeColor(gNanoVG, nvgRGBA(colorA.r, colorA.g, colorA.b, colorA.a));
       nvgFillColor(gNanoVG, nvgRGBA(colorA.r, colorA.g, colorA.b, colorA.a));
@@ -304,8 +301,7 @@ float ofClamp(float val, float a, float b)
 
 float ofGetLastFrameTime()
 {
-   /*TODO_PORT(Ryan)*/
-   return .01666f;
+   return std::max(1.0f / ofGetFrameRate(), 1.0f / 30.0f);
 }
 
 int ofToInt(const std::string& intString)
@@ -494,7 +490,7 @@ std::vector<std::string> ofSplitString(std::string str, std::string splitter, bo
       tokens.trim();
 
    std::vector<std::string> ret;
-   for (auto s : tokens)
+   for (auto& s : tokens)
       ret.push_back(s.toStdString());
 
    return ret;
@@ -576,6 +572,17 @@ void ofTriangle(float x1, float y1, float x2, float y2, float x3, float y3)
    ofVertex(x3, y3);
    ofVertex(x1, y1);
    ofEndShape();
+}
+
+//static
+ofRectangle ofRectangle::include(const ofRectangle& a, const ofRectangle& b)
+{
+   ofRectangle ret;
+   ret.x = MIN(a.getMinX(), b.getMinX());
+   ret.y = MIN(a.getMinY(), b.getMinY());
+   ret.width = MAX(a.getMaxX(), b.getMaxX()) - ret.x;
+   ret.height = MAX(a.getMaxY(), b.getMaxY()) - ret.y;
+   return ret;
 }
 
 float ofRectangle::getMinX() const
@@ -778,8 +785,15 @@ void RetinaTrueTypeFont::LoadFont(std::string path)
    File file(mFontPath.c_str());
    if (file.existsAsFile())
    {
-      mFontHandle = nvgCreateFont(gNanoVG, path.c_str(), path.c_str());
-      mFontBoundsHandle = nvgCreateFont(gFontBoundsNanoVG, path.c_str(), path.c_str());
+      for (int i = 0; i < (int)NanoVGRenderContext::Num; ++i) // load font in each render context
+      {
+         int fontHandle = nvgCreateFont(gNanoVGRenderContexts[i], path.c_str(), path.c_str());
+         if (i == (int)NanoVGRenderContext::Main)
+            mFontHandle = fontHandle;
+         if (i == (int)NanoVGRenderContext::FontBounds)
+            mFontBoundsHandle = fontHandle;
+      }
+
       mLoaded = true;
    }
    else
@@ -845,7 +859,7 @@ float RetinaTrueTypeFont::GetStringWidth(std::string str, float size)
    }
    else
    {
-      vg = gFontBoundsNanoVG;
+      vg = gNanoVGRenderContexts[(int)NanoVGRenderContext::FontBounds];
       handle = mFontBoundsHandle;
    }
 
@@ -871,7 +885,7 @@ float RetinaTrueTypeFont::GetStringHeight(std::string str, float size)
    }
    else
    {
-      vg = gFontBoundsNanoVG;
+      vg = gNanoVGRenderContexts[(int)NanoVGRenderContext::FontBounds];
       handle = mFontBoundsHandle;
    }
 

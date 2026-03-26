@@ -33,6 +33,7 @@
 #include "PatchCableSource.h"
 
 PulseTrain::PulseTrain()
+: IDrawableModule(254, 58)
 {
    for (int i = 0; i < kMaxSteps; ++i)
       mVels[i] = 1;
@@ -52,7 +53,7 @@ void PulseTrain::CreateUIControls()
    mLengthSlider = new IntSlider(this, "length", 3, 2, 96, 15, &mLength, 1, kMaxSteps);
    mIntervalSelector = new DropdownList(this, "interval", mLengthSlider, kAnchor_Right, (int*)(&mInterval));
 
-   mVelocityGrid = new UIGrid("uigrid", 3, 20, 248, 20, mLength, 1, this);
+   mVelocityGrid = new UIGrid(this, "uigrid", 3, 20, 248, 20, mLength, 1);
 
    mIntervalSelector->AddLabel("1n", kInterval_1n);
    mIntervalSelector->AddLabel("2n", kInterval_2n);
@@ -172,12 +173,6 @@ void PulseTrain::Step(double time, float velocity, int flags)
    ++mStep;
 }
 
-void PulseTrain::GetModuleDimensions(float& width, float& height)
-{
-   width = mWidth;
-   height = mHeight;
-}
-
 void PulseTrain::OnClicked(float x, float y, bool right)
 {
    IDrawableModule::OnClicked(x, y, right);
@@ -268,15 +263,11 @@ void PulseTrain::LoadState(FileStreamIn& in, int rev)
 
 void PulseTrain::SaveLayout(ofxJSONElement& moduleInfo)
 {
-   moduleInfo["width"] = mWidth;
-   moduleInfo["height"] = mHeight;
 }
 
 void PulseTrain::LoadLayout(const ofxJSONElement& moduleInfo)
 {
    mModuleSaveData.LoadString("target", moduleInfo);
-   mModuleSaveData.LoadInt("width", moduleInfo, 254, 254, 999999, K(isTextField));
-   mModuleSaveData.LoadInt("height", moduleInfo, 58, 58, 999999, K(isTextField));
 
    SetUpFromSaveData();
 }

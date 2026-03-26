@@ -59,8 +59,8 @@ class ClickButton : public IUIControl, public IPulseReceiver
 public:
    ClickButton(IButtonListener* owner, const char* label, int x, int y, ButtonDisplayStyle displayStyle = ButtonDisplayStyle::kText);
    ClickButton(IButtonListener* owner, const char* label, IUIControl* anchor, AnchorDirection anchorDirection, ButtonDisplayStyle displayStyle = ButtonDisplayStyle::kText);
+   IButtonListener* GetOwner() { return mOwner; }
    void SetLabel(const char* label);
-   void UpdateWidth();
    void Render() override;
    void MouseReleased() override;
    bool MouseMoved(float x, float y) override;
@@ -97,6 +97,7 @@ public:
 
 protected:
    ~ClickButton(); //protected so that it can't be created on the stack
+   void UpdateWidth() override;
 
 private:
    void DoClick(double time);

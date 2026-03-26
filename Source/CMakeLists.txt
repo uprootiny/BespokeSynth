@@ -39,8 +39,13 @@ target_sources(BespokeSynth PRIVATE
     ADSR.h
     ADSRDisplay.cpp
     ADSRDisplay.h
+    AbletonDeviceShared.h
     AbletonLink.cpp
     AbletonLink.h
+    AbletonMoveControl.cpp
+    AbletonMoveControl.h
+    AbletonMoveLCD.cpp
+    AbletonMoveLCD.h
     Acciaccatura.cpp
     Acciaccatura.h
     Amplifier.cpp
@@ -65,6 +70,8 @@ target_sources(BespokeSynth PRIVATE
     AudioToPulse.h
     Autotalent.cpp
     Autotalent.h
+    BassLineSequencer.cpp
+    BassLineSequencer.h
     BandVocoder.cpp
     BandVocoder.h
     BeatBloks.cpp
@@ -125,6 +132,8 @@ target_sources(BespokeSynth PRIVATE
     CommentDisplay.h
     Compressor.cpp
     Compressor.h
+    ControlInterface.cpp
+    ControlInterface.h
     ControlRecorder.cpp
     ControlRecorder.h
     ControlSequencer.cpp
@@ -149,6 +158,8 @@ target_sources(BespokeSynth PRIVATE
     DelayEffect.h
     DistortionEffect.cpp
     DistortionEffect.h
+    DopplerShift.cpp
+    DopplerShift.h
     DotGrid.cpp
     DotGrid.h
     DotSequencer.cpp
@@ -238,9 +249,11 @@ target_sources(BespokeSynth PRIVATE
     IAudioSource.h
     IClickable.cpp
     IClickable.h
+    IControlVisualizer.h
     IDrawableModule.cpp
     IDrawableModule.h
     IDrivableSequencer.h
+    IInputRecordable.h
     IMidiVoice.h
     IModulator.cpp
     IModulator.h
@@ -276,6 +289,8 @@ target_sources(BespokeSynth PRIVATE
     LFO.h
     LFOController.cpp
     LFOController.h
+    LatencyCalculator.cpp
+    LatencyCalculator.h
     LaunchpadInterpreter.cpp
     LaunchpadInterpreter.h
     LaunchpadKeyboard.cpp
@@ -353,6 +368,8 @@ target_sources(BespokeSynth PRIVATE
     ModulatorAddCentered.h
     BoundsToPulse.cpp
     BoundsToPulse.h
+    ModulatorBinaryValue.cpp
+    ModulatorBinaryValue.h
     ModulatorCurve.cpp
     ModulatorCurve.h
     ModulatorExpression.cpp
@@ -365,6 +382,8 @@ target_sources(BespokeSynth PRIVATE
     ModulatorSmoother.h
     ModulatorSubtract.cpp
     ModulatorSubtract.h
+    ModulatorWander.cpp
+    ModulatorWander.h
     ModuleContainer.cpp
     ModuleContainer.h
     ModuleFactory.cpp
@@ -669,6 +688,8 @@ target_sources(BespokeSynth PRIVATE
     Splitter.h
     StepSequencer.cpp
     StepSequencer.h
+    StereoRotation.cpp
+    StereoRotation.h
     Stutter.cpp
     Stutter.h
     StutterControl.cpp
@@ -681,6 +702,8 @@ target_sources(BespokeSynth PRIVATE
     SynthGlobals.h
     TakeRecorder.cpp
     TakeRecorder.h
+    TapTempo.cpp
+    TapTempo.h
     TextEntry.cpp
     TextEntry.h
     TimelineControl.cpp
@@ -689,6 +712,8 @@ target_sources(BespokeSynth PRIVATE
     TimerDisplay.h
     TitleBar.cpp
     TitleBar.h
+    TrackOrganizer.cpp
+    TrackOrganizer.h
     Transport.cpp
     Transport.h
     TransposeFrom.cpp
@@ -736,12 +761,16 @@ target_sources(BespokeSynth PRIVATE
     VelocityToCV.h
     VelocityToChance.cpp
     VelocityToChance.h
+    VelocityToDuration.cpp
+    VelocityToDuration.h
     VinylTempoControl.cpp
     VinylTempoControl.h
     Vocoder.cpp
     Vocoder.h
     VocoderCarrierInput.cpp
     VocoderCarrierInput.h
+    VoiceManager.cpp
+    VoiceManager.h
     VoiceSetter.cpp
     VoiceSetter.h
     VolcaBeatsControl.cpp
@@ -750,9 +779,13 @@ target_sources(BespokeSynth PRIVATE
     WaveformViewer.h
     Waveshaper.cpp
     Waveshaper.h
+    WelcomeScreen.cpp
+    WelcomeScreen.h
     WhiteKeys.cpp
     WhiteKeys.h
     WindowCloseListener.h
+    ZeroCrossRate.cpp
+    ZeroCrossRate.h
     ofxJSONElement.cpp
     ofxJSONElement.h
     )
@@ -841,6 +874,7 @@ if (APPLE)
     endif()
 elseif (WIN32)
     target_compile_definitions(BespokeSynth PRIVATE BESPOKE_WINDOWS=1)
+    target_link_libraries(BespokeSynth PRIVATE "dwmapi.lib")
 
     IF (MINGW)
         target_link_libraries(BespokeSynth PRIVATE iphlpapi)
@@ -887,11 +921,12 @@ target_link_libraries(BespokeSynth PRIVATE
     bespoke::push2
     bespoke::pybind11
     bespoke::xwax
+    bespoke::scalable-font2
 
     $<$<STREQUAL:${BESPOKE_SYSTEM_TUNING_LIBRARY},OFF>:tuning-library>
     oddsound-mts
     Ableton::Link
-    readerwriterqueue
+    $<$<STREQUAL:${BESPOKE_SYSTEM_READERWRITERQUEUE},OFF>:readerwriterqueue>
 
     juce::juce_audio_basics
     juce::juce_audio_devices

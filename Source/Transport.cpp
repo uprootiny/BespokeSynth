@@ -27,6 +27,7 @@
 #include "SynthGlobals.h"
 #include "ModularSynth.h"
 #include "ChaosEngine.h"
+#include "ableton/platforms/asio/AsioTimer.hpp"
 
 Transport* TheTransport = nullptr;
 
@@ -139,6 +140,13 @@ void Transport::Advance(double ms)
       if (mQueuedMeasure != -1)
       {
          SetMeasure(mQueuedMeasure);
+
+         if (mSeekMsAfterJump != 0.0)
+         {
+            mMeasureTime += mSeekMsAfterJump / MsPerBar();
+            mSeekMsAfterJump = 0.0;
+         }
+
          if (mLoopStartMeasure != -1)
             mQueuedMeasure = mLoopStartMeasure;
          else
@@ -265,13 +273,17 @@ void Transport::DrawModule()
    ofLine(nudgeX, mNudgeBackButton->GetRect(true).getMinY(), nudgeX, mNudgeBackButton->GetRect(true).getMaxY());
 }
 
-void Transport::Reset()
+void Transport::Reset(bool timeSensitive /*= false*/)
 {
    if (mLoopEndMeasure != -1)
-      mMeasureTime = mLoopEndMeasure - .01f;
+      mMeasureTime = mLoopEndMeasure - .0001f;
    else
-      mMeasureTime = .99f;
-   SetQueuedMeasure(NextBufferTime(true), 0);
+      mMeasureTime = .9999f;
+
+   if (timeSensitive) //try to line up downbeat with when user actually gave this input
+      mSeekMsAfterJump = gBufferSizeMs;
+
+   SetQueuedMeasure(gTime, 0);
 
    if (TheSynth->IsAudioPaused())
       TheSynth->SetAudioPaused(false);
@@ -691,6 +703,166 @@ void Transport::OnDrumEvent(NoteInterval drumEvent)
       if (info.mInterval == drumEvent)
          info.mListener->OnTimeEvent(0); //TODO(Ryan) calc sample offset
    }
+}
+
+bool Transport::OnAbletonGridControl(IAbletonGridDevice* abletonGrid, int controlIndex, float midiValue)
+{
+   if (controlIndex == AbletonDevice::kClickyEncoderTurn)
+   {
+      float increment = midiValue < 64 ? 1.0f : -1.0f;
+      float resolution = 1.0f;
+      if (abletonGrid->GetButtonState(AbletonDevice::kClickyEncoderButton))
+         resolution *= 10.0f;
+      if (abletonGrid->GetButtonState(AbletonDevice::kShiftButton))
+         resolution *= 10.0f;
+
+      if (increment > 0.0f)
+         mTempo = floor((mTempo + .0001f) * resolution) / resolution + increment / resolution;
+      else
+         mTempo = ceil((mTempo - .0001f) * resolution) / resolution + increment / resolution;
+
+      return true;
+   }
+
+   if (controlIndex == AbletonDevice::kVolumeEncoderTurn)
+   {
+      mNudgeFactor = AbletonDevice::GetEncoderIncrement(midiValue) * 100;
+      return true;
+   }
+
+   if (controlIndex >= abletonGrid->GetGridStartIndex() && controlIndex <= abletonGrid->GetGridStartIndex() + abletonGrid->GetGridNumPads())
+   {
+      int gridIndex = controlIndex - abletonGrid->GetGridStartIndex();
+      int x = gridIndex % abletonGrid->GetGridNumCols();
+      int y = abletonGrid->GetGridNumRows() - 1 - gridIndex / abletonGrid->GetGridNumCols();
+      int index = x + y * abletonGrid->GetGridNumCols();
+
+      if (midiValue > 0)
+      {
+         if (y == 0)
+         {
+            if (x == 0)
+               mTapTempoDetector.Tap(gTime);
+
+            if (x == 1)
+            {
+               if (mTapTempoDetector.HasEnoughSamples())
+               {
+                  SetTempo(round(mTapTempoDetector.GetCalculatedTempo()));
+                  Reset(K(timeSensitive));
+                  mTapTempoDetector.Clear();
+               }
+            }
+         }
+
+         if (y == 1)
+         {
+            if (x == 0)
+               Reset(K(timeSensitive));
+         }
+
+         if (y == 2)
+         {
+            if (x == 0) //shift backward 1 beat
+               SetMeasureTime(GetMeasureTime(gTime) - 1.0f / mTimeSigTop);
+            if (x == 1) //shift forward 1 beat
+               SetMeasureTime(GetMeasureTime(gTime) + 1.0f / mTimeSigTop);
+            if (x == 2) //shift backward 1 measure
+               SetMeasureTime(GetMeasureTime(gTime) - 1.0f);
+            if (x == 3) //shift forward 1 measure
+               SetMeasureTime(GetMeasureTime(gTime) + 1.0f);
+         }
+      }
+
+      return true;
+   }
+
+   return false;
+}
+
+void Transport::UpdateAbletonGridLeds(IAbletonGridDevice* abletonGrid)
+{
+   for (int x = 0; x < abletonGrid->GetGridNumCols(); ++x)
+   {
+      for (int y = 0; y < abletonGrid->GetGridNumRows(); ++y)
+      {
+         int pushColor = 0;
+
+         if (y == 0)
+         {
+            if (x == 0)
+               pushColor = AbletonDevice::kColorLemonYellow;
+         }
+         if (y == 0)
+         {
+            if (x == 1 && mTapTempoDetector.HasEnoughSamples())
+            {
+               pushColor = AbletonDevice::kColorGreen;
+            }
+         }
+         if (y == 1)
+         {
+            if (x == 0)
+               pushColor = AbletonDevice::kColorRed;
+         }
+         if (y == 2)
+         {
+            if (x == 0 || x == 1)
+               pushColor = AbletonDevice::kColorYellowGold;
+            if (x == 2 || x == 3)
+               pushColor = AbletonDevice::kColorOrange;
+         }
+
+         abletonGrid->SetLed(x + (abletonGrid->GetGridNumRows() - 1 - y) * abletonGrid->GetGridNumCols() + abletonGrid->GetGridStartIndex(), pushColor);
+      }
+   }
+
+   if (abletonGrid->GetAbletonDeviceType() == AbletonDeviceType::Move)
+   {
+      for (int x = 0; x < AbletonDevice::kNumStepButtons; ++x)
+      {
+         int pushColor = AbletonDevice::kColorOff;
+
+         int displayedBeats = mTimeSigTop;
+         while (displayedBeats > 4)
+            displayedBeats /= 2;
+
+         int displayDot = int(GetMeasurePos(gTime) * displayedBeats * 4);
+
+         if (x < 0 || x >= displayedBeats * 4)
+            pushColor = AbletonDevice::kColorOff;
+         else if (x == displayDot)
+            pushColor = (x % 4 == 0) ? AbletonDevice::kColorGreen : AbletonDevice::kColorMossGreen;
+         else
+            pushColor = AbletonDevice::kColorDarkGrey;
+
+         abletonGrid->SetLed(AbletonDevice::kStepButtonSection + x, pushColor);
+      }
+   }
+}
+
+bool Transport::UpdateAbletonMoveScreen(IAbletonGridDevice* abletonGrid, AbletonMoveLCD* lcd)
+{
+   bool showTapTempo = mTapTempoDetector.GetLastTapTime() > gTime - 3000 && mTapTempoDetector.HasEnoughSamples();
+   if (abletonGrid->GetButtonState(AbletonDevice::kClickyEncoderTouch) ||
+       abletonGrid->GetButtonState(AbletonDevice::kVolumeEncoderTouch) ||
+       showTapTempo)
+   {
+      lcd->DrawLCDText(("tempo: " + ofToString(mTempo, 2)).c_str(), 5, 13, LCDFONT_STYLE_REGULAR);
+
+      if (abletonGrid->GetButtonState(AbletonDevice::kVolumeEncoderTouch))
+         lcd->DrawLCDText(("nudge: " + ofToString(mNudgeFactor, 2)).c_str(), 5, 26, LCDFONT_STYLE_REGULAR);
+
+      if (showTapTempo)
+      {
+         lcd->DrawLCDText(("calculated tempo: " + ofToString(int(round(mTapTempoDetector.GetCalculatedTempo())))).c_str(), 5, 45, LCDFONT_STYLE_REGULAR);
+         lcd->DrawLCDText(("std dev: " + ofToString(mTapTempoDetector.GetCalculationStandardDeviation(), 2)).c_str(), 5, 58, LCDFONT_STYLE_REGULAR);
+      }
+
+      return true;
+   }
+
+   return false;
 }
 
 void Transport::FloatSliderUpdated(FloatSlider* slider, float oldVal, double time)

@@ -30,14 +30,15 @@ class MainContentComponent : public OpenGLAppComponent,
                              private Timer
 {
 public:
+   static constexpr const char* kAutoDevice = "auto";
+   static constexpr const char* kNoneDevice = "none";
+
    //==============================================================================
    MainContentComponent()
    : mSpaceMouseReader(mSynth)
    , mLastFpsUpdateTime(0)
    , mFrameCountAccum(0)
    , mPixelRatio(1)
-   , mFontBoundsVG(nullptr)
-   , mVG(nullptr)
    {
       ofLog() << "bespoke synth " << GetBuildInfoString();
 
@@ -145,6 +146,22 @@ public:
       mScreenPosition = getScreenPosition();
 
       mSpaceMouseReader.Poll();
+
+      if (mAudioDeviceConnectionState == AudioDeviceConnectionState::CheckForDisconnection)
+      {
+         if (!HasDesiredAudioDevice())
+            mAudioDeviceConnectionState = AudioDeviceConnectionState::Disconnected;
+      }
+
+      if (mAudioDeviceConnectionState == AudioDeviceConnectionState::Disconnected)
+      {
+         if (HasDesiredAudioDevice())
+         {
+            String audioError = InitializeAudioDevice();
+            if (audioError.isEmpty())
+               mAudioDeviceConnectionState = AudioDeviceConnectionState::Connected;
+         }
+      }
    }
 
    //==============================================================================
@@ -155,6 +172,8 @@ public:
 
       // You can use this function to initialise any resources you might need,
       // but be careful - it will be called on the audio thread, not the GUI thread.
+
+      ofLog() << "audioDeviceAboutToStart()";
    }
 
    void audioDeviceIOCallbackWithContext(const float* const* inputChannelData,
@@ -171,6 +190,8 @@ public:
 
    void audioDeviceStopped() override
    {
+      ofLog() << "audioDeviceStopped()";
+      mAudioDeviceConnectionState = AudioDeviceConnectionState::CheckForDisconnection;
    }
 
    void shutdownAudio()
@@ -185,17 +206,16 @@ public:
       // glewInit();
 #endif
 
-      mVG = nvgCreateGLES2(NVG_ANTIALIAS | NVG_STENCIL_STROKES);
-      mFontBoundsVG = nvgCreateGLES2(NVG_ANTIALIAS | NVG_STENCIL_STROKES);
+      for (int i = 0; i < (int)NanoVGRenderContext::Num; ++i)
+      {
+         gNanoVGRenderContexts[i] = nvgCreateGLES2(NVG_ANTIALIAS | NVG_STENCIL_STROKES);
+         if (gNanoVGRenderContexts[i] == nullptr)
+            printf("Could not init nanovg.\n");
+      }
+      gNanoVG = gNanoVGRenderContexts[(int)NanoVGRenderContext::Main];
 
-      if (mVG == nullptr)
-         printf("Could not init nanovg.\n");
-      if (mFontBoundsVG == nullptr)
-         printf("Could not init font bounds nanovg.\n");
-
+      mSynth.LoadResources();
       Push2Control::CreateStaticFramebuffer();
-
-      mSynth.LoadResources(mVG, mFontBoundsVG);
 
       /*for (auto deviceType : mGlobalManagers.mDeviceManager.getAvailableDeviceTypes())
       {
@@ -207,9 +227,6 @@ public:
             ofLog() << output.toStdString();
       }*/
 
-      const std::string kAutoDevice = "auto";
-      const std::string kNoneDevice = "none";
-
       if (UserPrefs.devicetype.Get() != kAutoDevice)
          mGlobalManagers.mDeviceManager.setCurrentAudioDeviceType(UserPrefs.devicetype.Get(), true);
 
@@ -217,37 +234,13 @@ public:
 
       mSynth.Setup(&mGlobalManagers.mDeviceManager, &mGlobalManagers.mAudioFormatManager, this, &openGLContext);
 
-      std::string outputDevice = UserPrefs.audio_output_device.Get();
-      std::string inputDevice = UserPrefs.audio_input_device.Get();
-      if (!mGlobalManagers.mDeviceManager.getCurrentDeviceTypeObject()->hasSeparateInputsAndOutputs())
-         inputDevice = outputDevice; //asio must have identical input and output
-
-      AudioDeviceManager::AudioDeviceSetup preferredSetupOptions;
-      preferredSetupOptions.sampleRate = gSampleRate / UserPrefs.oversampling.Get();
-      preferredSetupOptions.bufferSize = gBufferSize / UserPrefs.oversampling.Get();
-      if (outputDevice != kAutoDevice && outputDevice != kNoneDevice)
-         preferredSetupOptions.outputDeviceName = outputDevice;
-      if (inputDevice != kAutoDevice && inputDevice != kNoneDevice)
-         preferredSetupOptions.inputDeviceName = inputDevice;
-
 #ifdef JUCE_WINDOWS
       CoInitializeEx(0, COINIT_MULTITHREADED);
 #endif
 
-      int inputChannels = UserPrefs.max_input_channels.Get();
-      int outputChannels = UserPrefs.max_output_channels.Get();
-
-      if (inputDevice == kNoneDevice)
-         inputChannels = 0;
-      if (outputDevice == kNoneDevice)
-         outputChannels = 0;
-
-      String audioError = mGlobalManagers.mDeviceManager.initialise(inputChannels,
-                                                                    outputChannels,
-                                                                    nullptr,
-                                                                    true,
-                                                                    "",
-                                                                    &preferredSetupOptions);
+      std::string inputDevice = GetInputDeviceName();
+      std::string outputDevice = GetOutputDeviceName();
+      String audioError = InitializeAudioDevice();
 
       if (audioError.isEmpty())
       {
@@ -297,6 +290,8 @@ public:
             mSynth.InitIOBuffers(numInputChannels, numOutputChannels);
 
             mGlobalManagers.mDeviceManager.addAudioCallback(this);
+
+            mAudioDeviceConnectionState = AudioDeviceConnectionState::Connected;
          }
       }
       else
@@ -324,10 +319,82 @@ public:
       startTimerHz(UserPrefs.target_framerate.Get());
    }
 
+   std::string GetInputDeviceName() const
+   {
+      std::string inputDevice = UserPrefs.audio_input_device.Get();
+      if (!mGlobalManagers.mDeviceManager.getCurrentDeviceTypeObject()->hasSeparateInputsAndOutputs())
+         inputDevice = GetOutputDeviceName(); //asio must have identical input and output
+      return inputDevice;
+   }
+
+   std::string GetOutputDeviceName() const
+   {
+      return UserPrefs.audio_output_device.Get();
+   }
+
+   AudioDeviceManager::AudioDeviceSetup GetPreferredSetupOptions() const
+   {
+      std::string inputDevice = GetInputDeviceName();
+      std::string outputDevice = GetOutputDeviceName();
+      AudioDeviceManager::AudioDeviceSetup preferredSetupOptions;
+      preferredSetupOptions.sampleRate = gSampleRate / UserPrefs.oversampling.Get();
+      preferredSetupOptions.bufferSize = gBufferSize / UserPrefs.oversampling.Get();
+      if (outputDevice != kAutoDevice && outputDevice != kNoneDevice)
+         preferredSetupOptions.outputDeviceName = outputDevice;
+      if (inputDevice != kAutoDevice && inputDevice != kNoneDevice)
+         preferredSetupOptions.inputDeviceName = inputDevice;
+      return preferredSetupOptions;
+   }
+
+   String InitializeAudioDevice()
+   {
+      std::string inputDevice = GetInputDeviceName();
+      std::string outputDevice = GetOutputDeviceName();
+      AudioDeviceManager::AudioDeviceSetup preferredSetupOptions = GetPreferredSetupOptions();
+
+      int inputChannels = UserPrefs.max_input_channels.Get();
+      int outputChannels = UserPrefs.max_output_channels.Get();
+
+      if (inputDevice == kNoneDevice)
+         inputChannels = 0;
+      if (outputDevice == kNoneDevice)
+         outputChannels = 0;
+
+      String audioError = mGlobalManagers.mDeviceManager.initialise(inputChannels,
+                                                                    outputChannels,
+                                                                    nullptr,
+                                                                    true,
+                                                                    "",
+                                                                    &preferredSetupOptions);
+
+      return audioError;
+   }
+
+   bool HasDesiredAudioDevice()
+   {
+      String inputName = GetInputDeviceName();
+      String outputName = GetOutputDeviceName();
+      bool foundInputDevice = false;
+      bool foundOutputDevice = false;
+      for (auto& deviceType : mGlobalManagers.mDeviceManager.getAvailableDeviceTypes())
+      {
+         for (auto& deviceName : deviceType->getDeviceNames(K(isInput)))
+            if (deviceName.trim().equalsIgnoreCase(inputName.trim()))
+               foundInputDevice = true;
+         for (auto& deviceName : deviceType->getDeviceNames(!K(isInput)))
+            if (deviceName.trim().equalsIgnoreCase(outputName.trim()))
+               foundOutputDevice = true;
+      }
+      if (foundInputDevice && foundOutputDevice)
+         return true;
+      else
+         return false;
+   }
+
    void shutdown() override
    {
-      nvgDeleteGLES2(mVG);
-      nvgDeleteGLES2(mFontBoundsVG);
+      for (int i = 0; i < (int)NanoVGRenderContext::Num; ++i)
+         nvgDeleteGLES2(gNanoVGRenderContexts[i]);
    }
 
    void SetStartupSaveStateFile(const juce::String& bskPath)
@@ -364,7 +431,7 @@ public:
       if (UserPrefs.motion_trails.Get() <= 0)
          glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-      nvgBeginFrame(mVG, width, height, mPixelRatio);
+      nvgBeginFrame(gNanoVG, width, height, mPixelRatio);
 
       if (UserPrefs.motion_trails.Get() > 0)
       {
@@ -373,15 +440,17 @@ public:
          ofRect(0, 0, width, height);
       }
 
-      nvgLineCap(mVG, NVG_ROUND);
-      nvgLineJoin(mVG, NVG_ROUND);
       static float sSpacing = -.3f;
-      nvgTextLetterSpacing(mVG, sSpacing);
-      nvgTextLetterSpacing(mFontBoundsVG, sSpacing);
+      for (int i = 0; i < (int)NanoVGRenderContext::Num; ++i)
+      {
+         nvgLineCap(gNanoVGRenderContexts[i], NVG_ROUND);
+         nvgLineJoin(gNanoVGRenderContexts[i], NVG_ROUND);
+         nvgTextLetterSpacing(gNanoVGRenderContexts[i], sSpacing);
+      }
 
-      mSynth.Draw(mVG);
+      mSynth.Draw();
 
-      nvgEndFrame(mVG);
+      nvgEndFrame(gNanoVG);
 
       mSynth.PostRender();
 
@@ -533,7 +602,7 @@ private:
    void filesDropped(const StringArray& files, int x, int y) override
    {
       std::vector<std::string> strFiles;
-      for (auto file : files)
+      for (auto& file : files)
          strFiles.push_back(file.toStdString());
       mSynth.FilesDropped(strFiles, x, y);
    }
@@ -575,8 +644,6 @@ private:
 
    ModularSynth mSynth;
 
-   NVGcontext* mVG;
-   NVGcontext* mFontBoundsVG;
    int64 mLastFpsUpdateTime;
    int mFrameCountAccum;
    std::list<int> mPressedKeys;
@@ -584,6 +651,15 @@ private:
    juce::Point<int> mScreenPosition;
    juce::Point<int> mDesiredInitialPosition;
    SpaceMouseMessageWindow mSpaceMouseReader;
+
+   enum class AudioDeviceConnectionState
+   {
+      None,
+      Connected,
+      CheckForDisconnection,
+      Disconnected
+   };
+   AudioDeviceConnectionState mAudioDeviceConnectionState{ AudioDeviceConnectionState::None };
 
    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainContentComponent)
 };

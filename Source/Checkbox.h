@@ -37,6 +37,8 @@ public:
    Checkbox(IDrawableModule* owner, const char* label, int x, int y, bool* var);
    Checkbox(IDrawableModule* owner, const char* label, IUIControl* anchor, AnchorDirection anchorDirection, bool* var);
    void SetLabel(const char* label);
+   IDrawableModule* GetOwner() { return mOwner; }
+   bool* GetVar() { return mVar; }
    void SetVar(bool* var) { mVar = var; }
    void Render() override;
    void SetDisplayText(bool display);
@@ -61,6 +63,7 @@ public:
    bool IsButtonControl() override { return true; }
    void SetBoxSize(float size) { mHeight = size; }
    bool CanBeTargetedBy(PatchCableSource* source) const override;
+   bool ShouldDisplayAsInactive() const override { return GetValue() == 0; }
 
    bool CheckNeedsDraw() override;
 
@@ -69,6 +72,7 @@ public:
 
 protected:
    ~Checkbox(); //protected so that it can't be created on the stack
+   void UpdateWidth() override;
 
 private:
    void OnClicked(float x, float y, bool right) override;
@@ -78,7 +82,6 @@ private:
       height = mHeight;
    }
    void CalcSliderVal();
-   void UpdateWidth();
 
    float mWidth{ 15 };
    float mHeight{ 15 };

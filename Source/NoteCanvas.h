@@ -35,12 +35,15 @@
 #include "ClickButton.h"
 #include "DropdownList.h"
 #include "TextEntry.h"
+#include "AbletonDeviceShared.h"
+#include "LaunchpadKeyboard.h"
+#include "IInputRecordable.h"
 
 class CanvasControls;
 class CanvasTimeline;
 class CanvasScrollbar;
 
-class NoteCanvas : public IDrawableModule, public INoteSource, public ICanvasListener, public IFloatSliderListener, public IAudioPoller, public IIntSliderListener, public INoteReceiver, public IButtonListener, public IDropdownListener, public ITextEntryListener
+class NoteCanvas : public IDrawableModule, public INoteSource, public ICanvasListener, public IFloatSliderListener, public IAudioPoller, public IIntSliderListener, public INoteReceiver, public IButtonListener, public IDropdownListener, public ITextEntryListener, public IAbletonGridController, public IInputRecordable
 {
 public:
    NoteCanvas();
@@ -57,6 +60,7 @@ public:
    bool IsResizable() const override { return true; }
    void Resize(float w, float h) override;
    void KeyPressed(int key, bool isRepeat) override;
+   void DumpDebugData(std::string input, juce::FileOutputStream& out) override;
 
    void PlayNote(NoteMessage note) override;
    void SendCC(int control, int value, int voiceIdx = -1) override {}
@@ -65,13 +69,26 @@ public:
    NoteCanvasElement* AddNote(double measurePos, int pitch, int velocity, double length, int voiceIdx = -1, ModulationParameters modulation = ModulationParameters());
 
    /**
-    * @brief FitNotes adapt measures to fit all added notes
+    * @brief FitNotes adapt measures and pitch range to fit all added notes
     */
-   void FitNotes();
+   void FitNotes(bool length = true, bool pitchRange = false);
 
    void OnTransportAdvanced(float amount) override;
 
    void CanvasUpdated(Canvas* canvas) override;
+
+   //IAbletonGridController
+   bool OnAbletonGridControl(IAbletonGridDevice* abletonGrid, int controlIndex, float midiValue) override;
+   void UpdateAbletonGridLeds(IAbletonGridDevice* abletonGrid) override;
+   bool UpdateAbletonMoveScreen(IAbletonGridDevice* abletonGrid, AbletonMoveLCD* lcd) override;
+   bool HasHighPriorityAbletonMoveScreenUpdate(IAbletonGridDevice* abletonGrid) override;
+
+   //IInputRecordable
+   void SetRecording(bool record) override;
+   bool IsRecording() const override { return mRecord; }
+   void ClearRecording() override { Clear(NextBufferTime(false)); }
+   void CancelRecording() override { SetRecording(false); }
+   float GetRecordingLengthMeasures() const override { return mNumMeasures; }
 
    void CheckboxUpdated(Checkbox* checkbox, double time) override;
    void FloatSliderUpdated(FloatSlider* slider, float oldVal, double time) override;
@@ -92,17 +109,21 @@ public:
 private:
    //IDrawableModule
    void DrawModule() override;
-   void GetModuleDimensions(float& width, float& height) override;
 
    double GetCurPos(double time) const;
    void UpdateNumColumns();
-   void SetRecording(bool rec);
    void SetNumMeasures(int numMeasures);
    bool FreeRecordParityMatched();
    void ClipNotes();
    void QuantizeNotes();
    void LoadMidi();
    void SaveMidi();
+   bool RemoveEditPitch(int pitch);
+   bool AddEditPitch(int pitch, bool atEveryMeasure);
+   bool ToggleEditPitch(int pitch, bool atEveryMeasure);
+   void DoubleLoop();
+   void CopyNotesToClipboard(int stepIndex);
+   std::string GetCurrentEditMeasureString() const;
 
    Canvas* mCanvas{ nullptr };
    CanvasControls* mCanvasControls{ nullptr };
@@ -125,13 +146,27 @@ private:
    bool mRecord{ false };
    Checkbox* mRecordCheckbox{ nullptr };
    bool mStopQueued{ false };
-   NoteInterval mInterval{ NoteInterval::kInterval_8n };
+   NoteInterval mInterval{ NoteInterval::kInterval_16n };
    DropdownList* mIntervalSelector{ nullptr };
    bool mFreeRecord{ false };
    Checkbox* mFreeRecordCheckbox{ nullptr };
    int mFreeRecordStartMeasure{ 0 };
    bool mShowIntervals{ false };
    Checkbox* mShowIntervalsCheckbox{ nullptr };
+   LaunchpadKeyboard* mGridKeyboardInterface{ nullptr };
+
+   int mEditMeasureOffset{ 0 };
+   float mEditMeasureOffsetSlider{ 0.0f };
+   double mEditHoldTime{ 0.0 };
+   double mCopyHoldTime{ 0.0 };
+   int mEditHoldStep{ -1 };
+   int mEditCurrentPitchContext{ -1 };
+   bool mHasMadeStepEdit{ false };
+   std::vector<NoteCanvasElement*> mCurrentEditElements{};
+   std::vector<NoteCanvasElement*> mClipboardElements{};
+   int mClipboardCopyFromStep{ 0 };
+   std::array<bool, 128> mPitchMuted{};
+   float mPlaceNoteVelocity{ kVelocityNormal };
 
    std::vector<ModulationParameters> mVoiceModulations;
 };

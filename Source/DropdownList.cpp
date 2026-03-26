@@ -145,6 +145,16 @@ std::string DropdownList::GetLabel(int val) const
    return "";
 }
 
+bool DropdownList::HasLabel(int val) const
+{
+   for (int i = 0; i < mElements.size(); ++i)
+   {
+      if (mElements[i].mValue == val)
+         return true;
+   }
+   return false;
+}
+
 void DropdownList::Poll()
 {
    if (*mVar != mLastSetValue)
@@ -439,7 +449,7 @@ void DropdownList::Clear()
 void DropdownList::SetFromMidiCC(float slider, double time, bool setViaModulator)
 {
    slider = ofClamp(slider, 0, 1);
-   SetIndex(int(slider * mElements.size()), time, false);
+   SetIndex((int)round(slider * (mElements.size() - 1)), time, false);
    mSliderVal = slider;
    mLastSetValue = *mVar;
 
@@ -452,7 +462,7 @@ float DropdownList::GetValueForMidiCC(float slider) const
    if (mElements.empty())
       return 0;
 
-   int index = int(slider * mElements.size());
+   int index = (int)round(slider * (mElements.size() - 1));
    index = ofClamp(index, 0, mElements.size() - 1);
    return mElements[index].mValue;
 }
@@ -462,6 +472,11 @@ bool DropdownList::CanBeTargetedBy(PatchCableSource* source) const
    if (source->GetConnectionType() == kConnectionType_Pulse)
       return true;
    return IUIControl::CanBeTargetedBy(source);
+}
+
+bool DropdownList::ShouldDisplayAsInactive() const
+{
+   return IsInactiveValue(GetDisplayValue(*mVar));
 }
 
 void DropdownList::OnPulse(double time, float velocity, int flags)

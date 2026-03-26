@@ -34,6 +34,10 @@
 IUIControl* IUIControl::sLastHoveredUIControl = nullptr;
 //static
 bool IUIControl::sLastUIHoverWasSetManually = false;
+//static
+ofColor IUIControl::sCurrentOverrideColor = ofColor(0, 0, 0);
+//static
+bool IUIControl::sUseOverrideColor = false;
 
 IUIControl::~IUIControl()
 {
@@ -43,9 +47,9 @@ IUIControl::~IUIControl()
       gBindToUIControl = nullptr;
 }
 
-bool IUIControl::IsPreset()
+bool IUIControl::IsSnapshot()
 {
-   return VectorContains(this, Snapshots::sSnapshotHighlightControls);
+   return mSnapshotHighlight;
 }
 
 bool IUIControl::TestHover(int x, int y)
@@ -187,19 +191,31 @@ void IUIControl::PositionTo(IUIControl* anchor, AnchorDirection direction)
       mX = rect.x + rect.width + 10;
       mY = rect.y;
    }
+   else if (direction == kAnchor_Below_Padded)
+   {
+      mX = rect.x;
+      mY = rect.y + rect.height + 8;
+   }
 }
 
 void IUIControl::GetColors(ofColor& color, ofColor& textColor)
 {
-   IDrawableModule* module = dynamic_cast<IDrawableModule*>(GetParent());
-   if (module)
-      color = IDrawableModule::GetColor(module->GetModuleCategory());
+   if (sUseOverrideColor)
+   {
+      color = sCurrentOverrideColor;
+   }
    else
-      color = ofColor::white;
+   {
+      IDrawableModule* module = dynamic_cast<IDrawableModule*>(GetParent());
+      if (module)
+         color = IDrawableModule::GetColor(module->GetModuleCategory());
+      else
+         color = ofColor::white;
+   }
    float h, s, b;
    color.getHsb(h, s, b);
    color.setHsb(h, s * .4f, ofLerp(b, 0, .6f));
-   if (IsPreset())
+   if (IsSnapshot())
    {
       color.getHsb(h, s, b);
       color.setHsb(85, s, b);
@@ -217,6 +233,14 @@ void IUIControl::RemoveFromOwner()
    assert(owner);
    if (owner)
       owner->RemoveUIControl(this);
+}
+
+//static
+bool IUIControl::IsInactiveValue(std::string valueLabel)
+{
+   if (valueLabel == "0" || valueLabel == "none" || valueLabel == "off")
+      return true;
+   return false;
 }
 
 //static

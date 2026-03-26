@@ -9,11 +9,6 @@
 #include <cmath>
 #include <mutex>
 
-class NVGcontext;
-
-extern NVGcontext* gNanoVG;
-extern NVGcontext* gFontBoundsNanoVG;
-
 struct ofColor
 {
    ofColor()
@@ -170,6 +165,7 @@ struct ofRectangle
       height += amount * 2;
       return *this;
    }
+   static ofRectangle include(const ofRectangle& a, const ofRectangle& b);
    float getMinX() const;
    float getMaxX() const;
    float getMinY() const;

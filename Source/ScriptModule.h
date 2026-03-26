@@ -37,10 +37,11 @@
 #include "DropdownList.h"
 #include "ModulationChain.h"
 #include "MidiController.h"
+#include "AbletonDeviceShared.h"
 
 #include "juce_osc/juce_osc.h"
 
-class ScriptModule : public IDrawableModule, public IButtonListener, public NoteEffectBase, public IPulseReceiver, public ICodeEntryListener, public IFloatSliderListener, public IDropdownListener, private juce::OSCReceiver, private juce::OSCReceiver::Listener<juce::OSCReceiver::MessageLoopCallback>
+class ScriptModule : public IDrawableModule, public IButtonListener, public NoteEffectBase, public IPulseReceiver, public ICodeEntryListener, public IFloatSliderListener, public IDropdownListener, private juce::OSCReceiver, private juce::OSCReceiver::Listener<juce::OSCReceiver::MessageLoopCallback>, public IAbletonGridController
 {
 public:
    ScriptModule();
@@ -78,7 +79,7 @@ public:
    void ClearContext();
    bool IsScriptTrusted() const { return !mIsScriptUntrusted; }
 
-   void RunCode(double time, std::string code);
+   void RunCode(double time, std::string code, bool hasReturnValue = false);
 
    void OnPulse(double time, float velocity, int flags) override;
    void ButtonClicked(ClickButton* button, double time) override;
@@ -96,6 +97,10 @@ public:
 
    //OSCReceiver
    void oscMessageReceived(const juce::OSCMessage& msg) override;
+
+   //IAbletonGridController
+   bool OnAbletonGridControl(IAbletonGridDevice* abletonGrid, int controlIndex, float midiValue) override;
+   void UpdateAbletonGridLeds(IAbletonGridDevice* abletonGrid) override;
 
    bool HasDebugDraw() const override { return true; }
 
@@ -120,6 +125,7 @@ public:
    static bool sHasPythonEverSuccessfullyInitialized;
    static bool sHasLoadedUntrustedScript;
    static double sMostRecentRunTime;
+   static IAbletonGridDevice* sCurrentAbletonGridDevice;
 
    ModulationChain* GetPitchBend(int pitch) { return &mPitchBends[pitch]; }
    ModulationChain* GetModWheel(int pitch) { return &mModWheels[pitch]; }
@@ -152,7 +158,6 @@ private:
    //IDrawableModule
    void DrawModule() override;
    void DrawModuleUnclipped() override;
-   void GetModuleDimensions(float& width, float& height) override;
    bool IsResizable() const override { return true; }
    void Resize(float w, float h) override;
    void OnClicked(float x, float y, bool right) override;
@@ -186,8 +191,6 @@ private:
    float mC{ 0 };
    float mD{ 0 };
 
-   float mWidth{ 200 };
-   float mHeight{ 20 };
    std::array<double, 20> mScheduledPulseTimes{};
    std::string mLastError;
    size_t mScriptModuleIndex;
@@ -196,6 +199,9 @@ private:
    int mInitExecutePriority{ 0 };
    int mOscInputPort{ -1 };
    bool mIsScriptUntrusted{ false };
+   bool mLastReturnValueBool{ false };
+   int mLastReturnValueInt{ 0 };
+   float mLastReturnValueFloat{ 0.0f };
 
    struct ScheduledNoteOutput
    {
@@ -322,21 +328,13 @@ public:
 private:
    //IDrawableModule
    void DrawModule() override;
-   void GetModuleDimensions(float& w, float& h) override;
    bool IsResizable() const override { return true; }
-   void Resize(float w, float h) override
-   {
-      mWidth = w;
-      mHeight = h;
-   }
    bool MouseScrolled(float x, float y, float scrollX, float scrollY, bool isSmoothScroll, bool isInvertedScroll) override;
 
    void LoadText();
 
    std::vector<std::string> mText;
    ClickButton* mCloseButton{ nullptr };
-   float mWidth{ 750 };
-   float mHeight{ 335 };
    ofVec2f mScrollOffset;
    float mMaxScrollAmount{ 0 };
 };
@@ -345,7 +343,9 @@ private:
 class ScriptWarningPopup : public IDrawableModule
 {
 public:
-   ScriptWarningPopup() {}
+   ScriptWarningPopup()
+   : IDrawableModule(600, 120)
+   {}
    virtual ~ScriptWarningPopup() {}
    static IDrawableModule* Create() { return new ScriptWarningPopup(); }
    static bool AcceptsAudio() { return false; }
@@ -365,9 +365,6 @@ public:
 
 private:
    void DrawModule() override;
-
-   int mWidth{ 600 };
-   int mHeight{ 120 };
 
    int mRemainingUntrustedScriptModules{ 0 };
 };

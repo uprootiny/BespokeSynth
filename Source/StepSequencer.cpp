@@ -44,7 +44,7 @@ StepSequencer::StepSequencer()
    for (int i = 0; i < META_STEP_MAX * NUM_STEPSEQ_ROWS; ++i)
       mMetaStepMasks[i] = 0xff;
 
-   mStrength = gStepVelocityLevels[(int)StepVelocityType::Normal];
+   mStrength = kVelocityNormal;
 }
 
 void StepSequencer::Init()
@@ -57,7 +57,7 @@ void StepSequencer::Init()
 void StepSequencer::CreateUIControls()
 {
    IDrawableModule::CreateUIControls();
-   mGrid = new UIGrid("uigrid", 40, 45, 250, 150, 16, NUM_STEPSEQ_ROWS, this);
+   mGrid = new UIGrid(this, "uigrid", 52, 45, 250, 150, 16, NUM_STEPSEQ_ROWS);
    mGrid->SetStrength(mStrength);
 
    UIBLOCK0();
@@ -78,7 +78,7 @@ void StepSequencer::CreateUIControls()
    UIBLOCK_SHIFTRIGHT();
    UICONTROL_CUSTOM(mGridControlTarget, new GridControlTarget(UICONTROL_BASICS("grid")));
    UIBLOCK_SHIFTRIGHT();
-   DROPDOWN(mGridYOffDropdown, "yoff", &mGridYOff, 20);
+   DROPDOWN(mGridYOffDropdown, "yoff", &mGridYOff, 30);
    UIBLOCK_NEWLINE();
    DROPDOWN(mVelocityTypeDropdown, "velocitytype", (int*)(&mVelocityType), 60);
    UIBLOCK_SHIFTLEFT();
@@ -180,11 +180,6 @@ void StepSequencer::Poll()
    }
 }
 
-namespace
-{
-   const float kMidwayVelocity = .75f;
-}
-
 void StepSequencer::UpdateLights(bool force /*=false*/)
 {
    if (!HasGridController() || mGridControlTarget->GetGridController() == nullptr)
@@ -213,8 +208,14 @@ void StepSequencer::UpdateLights(bool force /*=false*/)
 GridColor StepSequencer::GetGridColor(int x, int y)
 {
    Vec2i gridPos = ControllerToGrid(Vec2i(x, y));
-   bool cellOn = mGrid->GetVal(gridPos.x, gridPos.y) > 0;
-   bool cellBright = mGrid->GetVal(gridPos.x, gridPos.y) > kMidwayVelocity;
+
+   if (gridPos.x >= GetNumSteps(mStepInterval, mNumMeasures))
+      return kGridColorOff;
+
+   float val = mGrid->GetVal(gridPos.x, gridPos.y);
+   bool cellOn = val > 0;
+   bool cellDim = val > 0 && val <= kVelocityGhost;
+   bool cellBright = val > kVelocityNormal;
    bool colOn = (mGrid->GetHighlightCol(gTime) == gridPos.x) && mEnabled;
 
    GridColor color;
@@ -222,6 +223,8 @@ GridColor StepSequencer::GetGridColor(int x, int y)
    {
       if (cellBright)
          color = kGridColor3Bright;
+      else if (cellDim)
+         color = kGridColor1Dim;
       else if (cellOn)
          color = kGridColor3Dim;
       else
@@ -231,6 +234,8 @@ GridColor StepSequencer::GetGridColor(int x, int y)
    {
       if (cellBright)
          color = kGridColor1Bright;
+      else if (cellDim)
+         color = kGridColor3Dim;
       else if (cellOn)
          color = kGridColor1Dim;
       else
@@ -298,7 +303,7 @@ void StepSequencer::OnControllerPageSelected()
 
 void StepSequencer::OnGridButton(int x, int y, float velocity, IGridController* grid)
 {
-   if (mPush2Connected || grid == mGridControlTarget->GetGridController())
+   if (mAbletonGridConnected || grid == mGridControlTarget->GetGridController())
    {
       bool press = velocity > 0;
       if (x >= 0 && y >= 0)
@@ -342,7 +347,7 @@ void StepSequencer::OnGridButton(int x, int y, float velocity, IGridController* 
    {
       if (velocity > 0)
       {
-         for (auto iter : mHeldButtons)
+         for (auto& iter : mHeldButtons)
          {
             float strength = (8 - y) / 8.0f;
             mGrid->SetVal(iter.mCol, iter.mRow, strength);
@@ -354,7 +359,7 @@ void StepSequencer::OnGridButton(int x, int y, float velocity, IGridController* 
    {
       if (velocity > 0)
       {
-         for (auto iter : mHeldButtons)
+         for (auto& iter : mHeldButtons)
          {
             mMetaStepMasks[GetMetaStepMaskIndex(iter.mCol, iter.mRow)] ^= 1 << x;
          }
@@ -378,8 +383,8 @@ int StepSequencer::GetGridControllerRows()
 {
    if (mGridControlTarget->GetGridController())
       return mGridControlTarget->GetGridController()->NumRows();
-   if (mPush2Connected)
-      return 8;
+   if (mAbletonGridConnected)
+      return mAbletonGridRows;
    return 8;
 }
 
@@ -387,8 +392,8 @@ int StepSequencer::GetGridControllerCols()
 {
    if (mGridControlTarget->GetGridController())
       return mGridControlTarget->GetGridController()->NumCols();
-   if (mPush2Connected)
-      return 8;
+   if (mAbletonGridConnected)
+      return mAbletonGridCols;
    return 8;
 }
 
@@ -408,15 +413,25 @@ Vec2i StepSequencer::ControllerToGrid(const Vec2i& controller)
 
 int StepSequencer::GetNumControllerChunks()
 {
-   if (!HasGridController())
-      return 1;
+   if (HasGridController())
+   {
+      if (mGridControllerMode == GridControllerMode::FitMultipleRows)
+      {
+         int rows = GetGridControllerRows();
+         int cols = GetGridControllerCols();
 
-   int rows = GetGridControllerRows();
-   int cols = GetGridControllerCols();
+         int numBreaks = int((mGrid->GetCols() / MAX(1.0f, cols)) + .5f);
+         int numChunks = int(mGrid->GetRows() / MAX(1.0f, (rows / MAX(1, numBreaks))) + .5f);
+         return numChunks;
+      }
 
-   int numBreaks = int((mGrid->GetCols() / MAX(1.0f, cols)) + .5f);
-   int numChunks = int(mGrid->GetRows() / MAX(1.0f, (rows / MAX(1, numBreaks))) + .5f);
-   return numChunks;
+      if (mGridControllerMode == GridControllerMode::SingleRow)
+      {
+         return mGrid->GetRows();
+      }
+   }
+
+   return 1;
 }
 
 void StepSequencer::DrawModule()
@@ -536,7 +551,7 @@ void StepSequencer::DrawRowLabel(const char* label, int row, int x, int y)
 
 void StepSequencer::GetModuleDimensions(float& width, float& height)
 {
-   width = mGrid->GetWidth() + 45;
+   width = mGrid->GetWidth() + 57;
    if (mAdjustOffsets)
       width += 100;
    height = mGrid->GetHeight() + 50;
@@ -573,23 +588,41 @@ bool StepSequencer::MouseMoved(float x, float y)
    return false;
 }
 
-bool StepSequencer::OnPush2Control(Push2Control* push2, MidiMessageType type, int controlIndex, float midiValue)
+bool StepSequencer::OnAbletonGridControl(IAbletonGridDevice* abletonGrid, int controlIndex, float midiValue)
 {
-   mPush2Connected = true;
+   mAbletonGridConnected = true;
+   mAbletonGridCols = abletonGrid->GetGridNumCols();
+   mAbletonGridRows = abletonGrid->GetGridNumRows();
 
-   if (type == kMidiMessage_Note)
+   if (controlIndex >= abletonGrid->GetGridStartIndex() && controlIndex < abletonGrid->GetGridStartIndex() + abletonGrid->GetGridNumPads())
    {
-      if (controlIndex >= 36 && controlIndex <= 99)
-      {
-         int gridIndex = controlIndex - 36;
-         int gridX = gridIndex % 8;
-         int gridY = 7 - gridIndex / 8;
-         OnGridButton(gridX, gridY, midiValue / 127, mGridControlTarget->GetGridController());
-         return true;
-      }
+      int gridIndex = controlIndex - abletonGrid->GetGridStartIndex();
+      int gridX = gridIndex % mAbletonGridCols;
+      int gridY = (mAbletonGridRows - 1) - gridIndex / mAbletonGridCols;
+      OnGridButton(gridX, gridY, midiValue / 127, mGridControlTarget->GetGridController());
+      return true;
    }
 
-   if (type == kMidiMessage_PitchBend)
+   if (controlIndex == AbletonDevice::kOctaveUpButton)
+   {
+      if (midiValue > 0)
+      {
+         mGridYOffDropdown->Increment(1);
+         abletonGrid->DisplayScreenMessage("row offset " + ofToString(mGridYOff));
+      }
+      return true;
+   }
+   if (controlIndex == AbletonDevice::kOctaveDownButton)
+   {
+      if (midiValue > 0)
+      {
+         mGridYOffDropdown->Increment(-1);
+         abletonGrid->DisplayScreenMessage("row offset " + ofToString(mGridYOff));
+      }
+      return true;
+   }
+
+   if (controlIndex == AbletonDevice::kPitchBendIndex)
    {
       float val = midiValue / MidiDevice::kPitchBendMax;
       mGridYOffDropdown->SetFromMidiCC(val, gTime, true);
@@ -600,14 +633,16 @@ bool StepSequencer::OnPush2Control(Push2Control* push2, MidiMessageType type, in
    return false;
 }
 
-void StepSequencer::UpdatePush2Leds(Push2Control* push2)
+void StepSequencer::UpdateAbletonGridLeds(IAbletonGridDevice* abletonGrid)
 {
-   mPush2Connected = true;
+   mAbletonGridConnected = true;
+   mAbletonGridCols = abletonGrid->GetGridNumCols();
+   mAbletonGridRows = abletonGrid->GetGridNumRows();
    int numYChunks = GetNumControllerChunks();
 
-   for (int x = 0; x < 8; ++x)
+   for (int x = 0; x < mAbletonGridCols; ++x)
    {
-      for (int y = 0; y < 8; ++y)
+      for (int y = 0; y < mAbletonGridRows; ++y)
       {
          int rowsPerChunk = std::max(1, (8 / numYChunks));
          int chunkIndex = y / rowsPerChunk;
@@ -616,40 +651,46 @@ void StepSequencer::UpdatePush2Leds(Push2Control* push2)
          switch (color)
          {
             case kGridColorOff: //off
-               pushColor = (chunkIndex % 2 == 0) ? 0 : 124;
+               pushColor = (chunkIndex % 2 == 0) ? AbletonDevice::kColorOff : AbletonDevice::kColorDarkGrey;
                break;
             case kGridColor1Dim: //
-               pushColor = 86;
+               pushColor = AbletonDevice::kColorMossGreen;
                break;
             case kGridColor1Bright: //pressed
-               pushColor = 32;
+               pushColor = AbletonDevice::kColorBrightGreen;
                break;
             case kGridColor2Dim:
-               pushColor = 114;
+               pushColor = AbletonDevice::kColorPinkRed;
                break;
             case kGridColor2Bright: //root
-               pushColor = 25;
+               pushColor = AbletonDevice::kColorBrightPink;
                break;
             case kGridColor3Dim: //not in pentatonic
-               pushColor = 116;
+               pushColor = AbletonDevice::kColorPaleMagenta;
                break;
             case kGridColor3Bright: //in pentatonic
-               pushColor = 115;
+               pushColor = AbletonDevice::kColorBrightMagenta;
                break;
          }
-         push2->SetLed(kMidiMessage_Note, x + (7 - y) * 8 + 36, pushColor);
+         abletonGrid->SetLed(x + (mAbletonGridRows - 1 - y) * mAbletonGridCols + abletonGrid->GetGridStartIndex(), pushColor);
       }
    }
 
-   std::string touchStripLights = { 0x00, 0x21, 0x1D, 0x01, 0x01, 0x19 };
-   for (int i = 0; i < 16; ++i)
+   abletonGrid->SetLed(AbletonDevice::kOctaveUpButton, 127);
+   abletonGrid->SetLed(AbletonDevice::kOctaveDownButton, 127);
+
+   if (abletonGrid->GetAbletonDeviceType() != AbletonDeviceType::Move)
    {
-      int ledLow = (int(((i * 2) / 32.0f) * numYChunks) == mGridYOff) ? 7 : 0;
-      int ledHigh = (int(((i * 2 + 1) / 32.0f) * numYChunks) == mGridYOff) ? 7 : 0;
-      unsigned char c = ledLow + (ledHigh << 3);
-      touchStripLights += c;
+      std::string touchStripLights = { 0x00, 0x21, 0x1D, 0x01, 0x01, 0x19 };
+      for (int i = 0; i < 16; ++i)
+      {
+         int ledLow = (int(((i * 2) / 32.0f) * numYChunks) == mGridYOff) ? 7 : 0;
+         int ledHigh = (int(((i * 2 + 1) / 32.0f) * numYChunks) == mGridYOff) ? 7 : 0;
+         unsigned char c = ledLow + (ledHigh << 3);
+         touchStripLights += c;
+      }
+      abletonGrid->GetDevice()->SendSysEx(touchStripLights);
    }
-   push2->GetDevice()->SendSysEx(touchStripLights);
 }
 
 int StepSequencer::GetNumSteps(NoteInterval interval, int numMeasures) const
@@ -766,9 +807,9 @@ void StepSequencer::OnPulse(double time, float velocity, int flags)
 }
 
 
-void StepSequencer::SendPressure(int pitch, int pressure)
+void StepSequencer::SendPressure(int channel, int pressure)
 {
-   mPadPressures[pitch] = pressure;
+   mPadPressures[channel] = pressure;
 }
 
 void StepSequencer::Exit()
@@ -790,7 +831,7 @@ bool StepSequencer::IsMetaStepActive(double time, int col, int row)
 
 bool StepSequencer::HasGridController()
 {
-   if (mPush2Connected)
+   if (mAbletonGridConnected)
       return true;
    return mGridControlTarget->GetGridController() != nullptr && mGridControlTarget->GetGridController()->IsConnected();
 }
@@ -820,7 +861,7 @@ void StepSequencer::FloatSliderUpdated(FloatSlider* slider, float oldVal, double
    if (slider == mStrengthSlider)
    {
       mGrid->SetStrength(mStrength);
-      for (auto iter : mHeldButtons)
+      for (auto& iter : mHeldButtons)
          mGrid->SetVal(iter.mCol, iter.mRow, mStrength);
 
       if (mHeldButtons.size() > 0)
@@ -964,29 +1005,27 @@ void StepSequencer::KeyPressed(int key, bool isRepeat)
       if (key == OF_KEY_UP || key == OF_KEY_DOWN)
       {
          float velocity = mGrid->GetVal(cell.mCol, cell.mRow);
-         if (velocity > 0)
+
+         if (key == OF_KEY_UP)
          {
-            if (key == OF_KEY_UP)
+            for (int i = 0; i < (int)gStepVelocityLevels.size(); ++i)
             {
-               for (int i = 0; i < (int)gStepVelocityLevels.size(); ++i)
+               if (velocity < gStepVelocityLevels[i])
                {
-                  if (velocity < gStepVelocityLevels[i])
-                  {
-                     mGrid->SetVal(cell.mCol, cell.mRow, gStepVelocityLevels[i]);
-                     break;
-                  }
+                  mGrid->SetVal(cell.mCol, cell.mRow, gStepVelocityLevels[i]);
+                  break;
                }
             }
+         }
 
-            if (key == OF_KEY_DOWN)
+         if (key == OF_KEY_DOWN)
+         {
+            for (int i = (int)gStepVelocityLevels.size() - 1; i >= 0; --i)
             {
-               for (int i = (int)gStepVelocityLevels.size() - 1; i >= 0; --i)
+               if (velocity > gStepVelocityLevels[i])
                {
-                  if (velocity > gStepVelocityLevels[i])
-                  {
-                     mGrid->SetVal(cell.mCol, cell.mRow, gStepVelocityLevels[i]);
-                     break;
-                  }
+                  mGrid->SetVal(cell.mCol, cell.mRow, gStepVelocityLevels[i]);
+                  break;
                }
             }
          }
@@ -1015,6 +1054,11 @@ void StepSequencer::LoadLayout(const ofxJSONElement& moduleInfo)
    velEntryModeMap["slider"] = (int)StepVelocityEntryMode::Slider;
    mModuleSaveData.LoadEnum<StepVelocityEntryMode>("velocity_entry_mode", moduleInfo, (int)StepVelocityEntryMode::Dropdown, nullptr, &velEntryModeMap);
 
+   EnumMap gridControllerModeMap;
+   gridControllerModeMap["fit multiple rows"] = (int)GridControllerMode::FitMultipleRows;
+   gridControllerModeMap["single row"] = (int)GridControllerMode::SingleRow;
+   mModuleSaveData.LoadEnum<GridControllerMode>("grid_controller_mode", moduleInfo, (int)GridControllerMode::FitMultipleRows, nullptr, &gridControllerModeMap);
+
    SetUpFromSaveData();
 }
 
@@ -1031,6 +1075,7 @@ void StepSequencer::SetUpFromSaveData()
 
    mNoteInputMode = mModuleSaveData.GetEnum<NoteInputMode>("note_input_mode");
    mStepVelocityEntryMode = mModuleSaveData.GetEnum<StepVelocityEntryMode>("velocity_entry_mode");
+   mGridControllerMode = mModuleSaveData.GetEnum<GridControllerMode>("grid_controller_mode");
 
    if (mNoteInputMode == NoteInputMode::RepeatHeld)
       mHasExternalPulseSource = false;
@@ -1101,6 +1146,8 @@ StepSequencerRow::~StepSequencerRow()
 void StepSequencerRow::CreateUIControls()
 {
    mRowPitchEntry = new TextEntry(mSeq, ("rowpitch" + ofToString(mRow)).c_str(), -1, -1, 3, &mRowPitch, 0, 127);
+   mPlayRowCheckbox = new Checkbox(mSeq, ("play" + ofToString(mRow)).c_str(), -1, -1, &mPlayRow);
+   mPlayRowCheckbox->SetDisplayText(false);
 }
 
 void StepSequencerRow::OnTimeEvent(double time)
@@ -1116,7 +1163,7 @@ void StepSequencerRow::OnTimeEvent(double time)
 void StepSequencerRow::PlayStep(double time, int step)
 {
    float val = mGrid->GetVal(step, mRow);
-   if (val > 0 && mSeq->IsMetaStepActive(time, step, mRow))
+   if (mPlayRow && val > 0 && mSeq->IsMetaStepActive(time, step, mRow))
    {
       mSeq->PlayStepNote(time, mRowPitch, val * val);
       mPlayedSteps[mPlayedStepsRoundRobin].step = step;
@@ -1150,6 +1197,10 @@ void StepSequencerRow::Draw(float x, float y)
    mRowPitchEntry->SetShowing(showTextEntry);
    mRowPitchEntry->SetPosition(x - 32, y);
    mRowPitchEntry->Draw();
+
+   mPlayRowCheckbox->SetShowing(showTextEntry);
+   mPlayRowCheckbox->SetPosition(x - 48, y);
+   mPlayRowCheckbox->Draw();
 
    if (!showTextEntry)
       DrawTextRightJustify(ofToString(mRowPitch), x - 7, y + 10);

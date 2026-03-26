@@ -32,15 +32,17 @@
 #include "MidiController.h"
 #include "TitleBar.h"
 #include "DropdownList.h"
+#include "AbletonDeviceShared.h"
+#include "LockFreeQueue.h"
 
 class NVGcontext;
 class NVGLUframebuffer;
 class IUIControl;
-class IPush2GridController;
+class IAbletonGridController;
 class Snapshots;
 class ControlRecorder;
 
-class Push2Control : public IDrawableModule, public MidiDeviceListener, public IDropdownListener
+class Push2Control : public IDrawableModule, public MidiDeviceListener, public IDropdownListener, public IAbletonGridDevice
 {
 public:
    Push2Control();
@@ -55,15 +57,23 @@ public:
    void Exit() override;
    void KeyPressed(int key, bool isRepeat) override;
 
-   void SetLed(MidiMessageType type, int index, int color, int flashColor = -1);
-   void SetDisplayModule(IDrawableModule* module, bool addToHistory = true);
-   IDrawableModule* GetDisplayModule() const { return mDisplayModule; }
+   void SetLed(int index, int color, int flashColor = -1) override;
+   bool GetButtonState(int index) const override;
+   void SetDisplayModule(IDrawableModule* module, bool addToHistory = true) override;
+   void DisplayScreenMessage(std::string message, float durationMs = 500) override { ofLog() << "todo: handle push 2 screen message"; }
+   IDrawableModule* GetDisplayModule() const override { return mDisplayModule; }
+   AbletonDeviceType GetAbletonDeviceType() const override { return AbletonDeviceType::Push2; }
+   int GetGridStartIndex() const override { return AbletonDevice::kPadsSection; }
+   int GetGridNumPads() const override { return AbletonDevice::kNumPads; }
+   int GetGridNumCols() const override { return 8; }
+   int GetGridNumRows() const override { return 8; }
 
    void OnMidiNote(MidiNote& note) override;
    void OnMidiControl(MidiControl& control) override;
    void OnMidiPitchBend(MidiPitchBend& pitchBend) override;
+   void OnMidiPressure(MidiPressure& pressure) override;
 
-   MidiDevice* GetDevice() { return &mDevice; }
+   MidiDevice* GetDevice() override { return &mDevice; }
 
    void DropdownUpdated(DropdownList* list, int oldVal, double time) override {}
 
@@ -74,11 +84,10 @@ public:
    void SaveLayout(ofxJSONElement& moduleInfo) override;
    int GetModuleSaveStateRev() const override { return 1; }
 
-   int GetGridControllerOption1Control() const;
-   int GetGridControllerOption2Control() const;
+   int GetGridControllerOption1Control() const override;
+   int GetGridControllerOption2Control() const override;
 
    static bool sDrawingPush2Display;
-   static NVGcontext* sVG;
    static NVGLUframebuffer* sFB;
    static void CreateStaticFramebuffer(); //windows was having trouble creating a nanovg context and fbo on the fly
    static IUIControl* sBindToUIControl;
@@ -111,7 +120,6 @@ private:
    void RemoveFavoriteControl(IUIControl* control);
    void BookmarkModuleToSlot(int slotIndex, IDrawableModule* module);
    void SwitchToBookmarkedModule(int slotIndex);
-   int GetPadColorForType(ModuleCategory type, bool enabled) const;
    bool GetGridIndex(int gridX, int gridY, int& gridIndex) const
    {
       gridIndex = gridX + gridY * 8;
@@ -128,18 +136,17 @@ private:
    int GetNumDisplayPixels() const;
    bool AllowRepatch() const;
    void UpdateRoutingModules();
-   void SetGridControlInterface(IPush2GridController* controller, IDrawableModule* module);
+   void SetGridControlInterface(IAbletonGridController* controller, IDrawableModule* module);
+
+   void OnMidiNote_Consume(MidiNote& note);
+   void OnMidiControl_Consume(MidiControl& control);
+   void OnMidiPitchBend_Consume(MidiPitchBend& pitchBend);
+   void OnMidiPressure_Consume(MidiPressure& pressure);
 
    unsigned char* mPixels{ nullptr };
    const int kPixelRatio = 1;
 
    const float kColumnSpacing = 121;
-
-   int mFontHandle{ 0 };
-   int mFontHandleBold{ 0 };
-
-   float mWidth{ 100 };
-   float mHeight{ 20 };
 
    IDrawableModule* mDisplayModule{ nullptr };
    Snapshots* mDisplayModuleSnapshots{ nullptr };
@@ -175,7 +182,6 @@ private:
    bool mLFOButtonHeld{ false };
    bool mAutomateButtonHeld{ false };
    bool mAddModuleBookmarkButtonHeld{ false };
-   std::array<bool, 128> mNoteHeldState;
    IDrawableModule* mHeldModule{ nullptr };
    double mModuleHeldTime{ -1 };
    bool mRepatchedHeldModule{ false };
@@ -214,11 +220,12 @@ private:
    };
    ScreenDisplayMode mScreenDisplayMode{ ScreenDisplayMode::kNormal };
 
-   IPush2GridController* mGridControlInterface{ nullptr };
+   IAbletonGridController* mGridControlInterface{ nullptr };
    IDrawableModule* mGridControlModule{ nullptr };
    bool mDisplayModuleCanControlGrid{ false };
 
    int mLedState[128 * 2]{}; //bottom 128 are notes, top 128 are CCs
+   bool mButtonState[128 * 2]{}; //bottom 128 are notes, top 128 are CCs
 
    MidiDevice mDevice;
 
@@ -226,14 +233,9 @@ private:
    int mPendingSpawnPitch{ -1 };
    int mSelectedGridSpawnListIndex{ -1 };
    std::string mPushBridgeInitErrMsg;
-};
 
-//https://raw.githubusercontent.com/Ableton/push-interface/master/doc/MidiMapping.png
-class IPush2GridController
-{
-public:
-   virtual ~IPush2GridController() {}
-   virtual void OnPush2Connect() {}
-   virtual bool OnPush2Control(Push2Control* push2, MidiMessageType type, int controlIndex, float midiValue) = 0;
-   virtual void UpdatePush2Leds(Push2Control* push2) = 0;
+   LockFreeQueue<MidiNote> mQueuedNoteMessages{};
+   LockFreeQueue<MidiControl> mQueuedControlMessages{};
+   LockFreeQueue<MidiPitchBend> mQueuedPitchBendMessages{};
+   LockFreeQueue<MidiPressure> mQueuedPressureMessages{};
 };

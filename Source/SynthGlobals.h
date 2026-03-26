@@ -57,7 +57,7 @@ void* operator new[](std::size_t size, const char* file, int line) throw(std::ba
 #define __PRETTY_FUNCTION__ __FUNCSIG__
 #endif
 
-#define MAX_BUFFER_SIZE 30 * gSampleRate
+#define MAX_BUFFER_SIZE 60 * gSampleRate
 #define MAX_TEXTENTRY_LENGTH 1024
 
 #ifndef M_PI
@@ -80,6 +80,7 @@ class IUIControl;
 class IDrawableModule;
 class RollingBuffer;
 class ChannelBuffer;
+struct NVGcontext;
 
 typedef std::map<std::string, int> EnumMap;
 
@@ -101,7 +102,6 @@ extern RetinaTrueTypeFont gFont;
 extern RetinaTrueTypeFont gFontBold;
 extern RetinaTrueTypeFont gFontFixedWidth;
 extern float gModuleDrawAlpha;
-extern float gNullBuffer[kWorkBufferSize];
 extern float gZeroBuffer[kWorkBufferSize];
 extern float gWorkBuffer[kWorkBufferSize]; //scratch buffer for doing work in
 extern ChannelBuffer gWorkChannelBuffer;
@@ -112,6 +112,17 @@ extern float gControlTactileFeedback;
 extern float gDrawScale;
 extern bool gShowDevModules;
 extern float gCornerRoundness;
+
+enum class NanoVGRenderContext
+{
+   Main,
+   FontBounds,
+   AbletonPush2Screen,
+   Screenshot,
+   Num
+};
+extern std::array<NVGcontext*, (int)NanoVGRenderContext::Num> gNanoVGRenderContexts;
+extern NVGcontext* gNanoVG;
 
 extern std::random_device gRandomDevice;
 
@@ -142,11 +153,16 @@ enum KeyModifiers
 
 enum class StepVelocityType
 {
-   Ghost = 0,
-   Normal = 1,
-   Accent = 2,
-   NumVelocityLevels = 3
+   Off = 0,
+   Ghost = 1,
+   Normal = 2,
+   Accent = 3,
+   NumVelocityLevels = 4
 };
+constexpr float kVelocityOff = 0.0f;
+constexpr float kVelocityGhost = 0.4f;
+constexpr float kVelocityNormal = 0.75f;
+constexpr float kVelocityAccent = 1.0f;
 extern std::array<float, (int)StepVelocityType::NumVelocityLevels> gStepVelocityLevels;
 
 class LoadingJSONException : public std::exception
@@ -229,20 +245,32 @@ float GetRightPanGain(float pan);
 void DrawFallbackText(const char* text, float posX, float posY);
 bool EvaluateExpression(std::string expression, float currentValue, float& output);
 double NextBufferTime(bool includeLookahead);
+bool IsMainThread();
 bool IsAudioThread();
+bool IsRenderThread();
 
 inline static float RandomSample()
 {
    return gRandomBipolarDist(gRandom);
 }
 
-inline static int DeterministicRandom(int seed, int index)
+inline static uint64_t DeterministicRandomInt64(int seed, int index)
 {
    uint64_t x = seed + ((uint64_t)index << 32);
    x = (x ^ (x >> 30)) * (0xbf58476d1ce4e5b9);
    x = (x ^ (x >> 27)) * (0x94d049bb133111eb);
    x = x ^ (x >> 31);
-   return (int)x;
+   return x;
+}
+
+inline static int DeterministicRandom(int seed, int index)
+{
+   return (int)DeterministicRandomInt64(seed, index);
+}
+
+inline static float DeterministicRandomFloat01(int seed, int index)
+{
+   return float(DeterministicRandomInt64(seed, index)) / UINT64_MAX;
 }
 
 inline static std::string GetPathSeparator()
