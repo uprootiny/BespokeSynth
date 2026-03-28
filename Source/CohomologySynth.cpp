@@ -372,22 +372,68 @@ void CohomologySynth::ComputeLaplacianSpectrum()
    }
    mNumModes = N;
 
-   // Compute Betti numbers
-   // β₀ = # zero eigenvalues of Δ₀ (connected components)
-   mBetti[0] = 0;
-   for (int i = 0; i < N; ++i)
-      if (mEigenvalues[i] < 0.001f) mBetti[0]++;
+   // Compute Betti numbers via rank-nullity theorem on coboundary matrices.
+   // β₀ = dim ker(δ⁰) = N₀ - rank(δ⁰)
+   // β₁ = dim ker(δ¹) - rank(δ⁰)  = (N₁ - rank(δ¹)) - rank(δ⁰)
+   // β₂ = N₂ - rank(δ¹)
 
-   // β₁ = N₁ - N₀ + β₀ (Euler characteristic: χ = β₀ - β₁ + β₂ = N₀ - N₁ + N₂)
-   // β₁ = N₁ - N₀ + β₀ - N₂ + β₂ ... simplified via rank-nullity:
-   // β₁ = nullity(Δ₁) — but we only computed Δ₀'s spectrum.
-   // Use Euler: χ = N₀ - N₁ + N₂, and β₁ = β₀ + β₂ - χ
-   int euler = mNumVertices - mNumEdges + mNumFaces;
-   // For closed orientable surfaces: β₂ = 1 if all faces form a closed surface
-   // Heuristic: β₂ = 1 if χ ≤ 2 and we have faces, else 0
-   mBetti[2] = (mNumFaces > 0 && euler <= 2) ? 1 : 0;
-   mBetti[1] = mBetti[0] + mBetti[2] - euler;
+   // Compute rank of δ⁰ (N₁ × N₀ matrix) via Gaussian elimination
+   auto computeRank = [](float mat[][kMaxVertices], int rows, int cols) -> int {
+      // Work on a copy
+      float work[kMaxEdges][kMaxVertices];
+      for (int i = 0; i < rows; ++i)
+         for (int j = 0; j < cols; ++j)
+            work[i][j] = mat[i][j];
+
+      int rank = 0;
+      for (int col = 0; col < cols && rank < rows; ++col)
+      {
+         // Find pivot
+         int pivot = -1;
+         float maxVal = 1e-6f;
+         for (int row = rank; row < rows; ++row)
+         {
+            if (fabsf(work[row][col]) > maxVal)
+            {
+               maxVal = fabsf(work[row][col]);
+               pivot = row;
+            }
+         }
+         if (pivot < 0) continue;
+
+         // Swap rows
+         for (int j = 0; j < cols; ++j)
+            std::swap(work[rank][j], work[pivot][j]);
+
+         // Eliminate below
+         float pivotVal = work[rank][col];
+         for (int row = rank + 1; row < rows; ++row)
+         {
+            float factor = work[row][col] / pivotVal;
+            for (int j = col; j < cols; ++j)
+               work[row][j] -= factor * work[rank][j];
+         }
+         rank++;
+      }
+      return rank;
+   };
+
+   int rankDelta0 = computeRank(mDelta0, mNumEdges, mNumVertices);
+
+   // For δ¹ rank, need a version that takes the right array sizes
+   // δ¹ is N₂ × N₁. Reinterpret mDelta1 for the rank computation.
+   float delta1ForRank[kMaxFaces][kMaxVertices]{}; // reuse vertex-sized cols (kMaxEdges ≤ kMaxVertices*2 but this is fine for small N)
+   for (int i = 0; i < mNumFaces; ++i)
+      for (int j = 0; j < mNumEdges; ++j)
+         if (j < kMaxVertices) delta1ForRank[i][j] = mDelta1[i][j];
+   int rankDelta1 = computeRank(delta1ForRank, mNumFaces, std::min(mNumEdges, (int)kMaxVertices));
+
+   mBetti[0] = mNumVertices - rankDelta0;        // connected components
+   mBetti[1] = mNumEdges - rankDelta0 - rankDelta1; // independent loops
+   mBetti[2] = mNumFaces - rankDelta1;            // enclosed cavities
+   if (mBetti[0] < 0) mBetti[0] = 0;
    if (mBetti[1] < 0) mBetti[1] = 0;
+   if (mBetti[2] < 0) mBetti[2] = 0;
 }
 
 void CohomologySynth::ExtractModes()
@@ -473,27 +519,34 @@ void CohomologySynth::Process(double time)
    PROFILER(CohomologySynth);
 
    IAudioReceiver* target = GetTarget();
-   if (!target || !mEnabled)
+   if (!mEnabled || target == nullptr)
       return;
 
+   SyncBuffers(1);
    ComputeSliders(0);
-   SyncBuffers();
 
-   int bufferSize = GetBuffer()->BufferSize();
+   int bufferSize = target->GetBuffer()->BufferSize();
+   mWriteBuffer.Clear();
    float* out = mWriteBuffer.GetChannel(0);
-   Clear(out, bufferSize);
 
-   // Find smallest nonzero eigenvalue for pitch mapping
+   // Cache: find smallest nonzero eigenvalue once per buffer (not per sample)
    float minLambda = 1e10f;
    for (int m = 0; m < mActiveModes; ++m)
       if (mModes[m].frequency > 0.01f && mModes[m].frequency < minLambda)
          minLambda = mModes[m].frequency;
    if (minLambda < 0.01f) minLambda = 1.0f;
 
+   // Cache: precompute phase increments per mode (avoid division per sample)
+   float phaseInc[kMaxModes];
+   for (int m = 0; m < mActiveModes; ++m)
+   {
+      float freq = mBaseFreq * (mModes[m].frequency / minLambda);
+      phaseInc[m] = freq * FTWO_PI / gSampleRate;
+   }
+
    for (int s = 0; s < bufferSize; ++s)
    {
       mEnvelopeValue = mEnvelope.Value(time);
-
       float sample = 0;
 
       for (int m = 0; m < mActiveModes; ++m)
@@ -501,51 +554,32 @@ void CohomologySynth::Process(double time)
          CohomMode& mode = mModes[m];
          if (mode.amplitude < 1e-7f) continue;
 
-         // Map eigenvalue to actual frequency: f_mode = baseFreq * (λ_mode / λ_min)
-         float freq = mBaseFreq * (mode.frequency / minLambda);
-
-         // Advance phase
-         float phaseInc = freq * FTWO_PI / gSampleRate;
-         mode.phase += phaseInc;
+         mode.phase += phaseInc[m];
          if (mode.phase > FTWO_PI) mode.phase -= FTWO_PI;
 
-         // Accumulate
          sample += mode.amplitude * sinf(mode.phase);
-
-         // Damping
          mode.amplitude *= mode.damping;
       }
 
-      sample *= mVolume * mEnvelopeValue;
-      out[s] = sample;
-
-      // Compute per-vertex amplitudes for visualization (every 64 samples)
-      if ((s & 63) == 0)
-      {
-         for (int v = 0; v < mNumVertices; ++v)
-         {
-            float vertAmp = 0;
-            for (int m = 0; m < mActiveModes; ++m)
-            {
-               if (mModes[m].amplitude < 1e-7f) continue;
-               vertAmp += mModes[m].amplitude * mModes[m].modeShape[v] * sinf(mModes[m].phase);
-            }
-            mVertexAmplitude[v] = vertAmp;
-         }
-      }
-
+      out[s] = sample * mVolume * mEnvelopeValue;
       time += gInvSampleRateMs;
    }
 
-   // Mix into output
-   GetBuffer()->GetChannel(0)->CopyFrom(out, bufferSize);
-   SyncBuffers();
-   GetBuffer()->SetNumActiveChannels(1);
+   // Visualization: compute vertex amplitudes once per buffer (not per sample)
+   for (int v = 0; v < mNumVertices; ++v)
+   {
+      float vertAmp = 0;
+      for (int m = 0; m < mActiveModes; ++m)
+      {
+         if (mModes[m].amplitude < 1e-7f) continue;
+         vertAmp += mModes[m].amplitude * mModes[m].modeShape[v] * sinf(mModes[m].phase);
+      }
+      mVertexAmplitude[v] = vertAmp;
+   }
 
-   IAudioReceiver* receiver = GetTarget();
-   if (receiver)
-      Add(receiver->GetBuffer()->GetChannel(0), GetBuffer()->GetChannel(0), bufferSize);
-
+   // Output: follow KarplusStrong pattern exactly
+   GetVizBuffer()->WriteChunk(out, bufferSize, 0);
+   Add(target->GetBuffer()->GetChannel(0), out, bufferSize);
    GetBuffer()->Reset();
 }
 

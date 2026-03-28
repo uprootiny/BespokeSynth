@@ -114,7 +114,7 @@ public:
    LatticeSynth();
    ~LatticeSynth();
    static IDrawableModule* Create() { return new LatticeSynth(); }
-   static bool AcceptsAudio() { return true; }
+   static bool AcceptsAudio() { return false; }
    static bool AcceptsNotes() { return true; }
    static bool AcceptsPulses() { return false; }
 

@@ -138,7 +138,7 @@ public:
    CohomologySynth();
    ~CohomologySynth();
    static IDrawableModule* Create() { return new CohomologySynth(); }
-   static bool AcceptsAudio() { return true; }
+   static bool AcceptsAudio() { return false; }
    static bool AcceptsNotes() { return true; }
    static bool AcceptsPulses() { return false; }
 

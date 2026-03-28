@@ -250,13 +250,13 @@ void LatticeSynth::Process(double time)
    PROFILER(LatticeSynth);
 
    IAudioReceiver* target = GetTarget();
-   if (!target || !mEnabled)
+   if (!mEnabled || target == nullptr)
       return;
 
+   SyncBuffers(1);
    ComputeSliders(0);
-   SyncBuffers();
 
-   // Update per-node params from globals
+   // Update per-node params from globals (once per buffer, not per sample)
    for (int i = 0; i < mNumNodes; ++i)
    {
       mNodes[i].reflection = mReflection;
@@ -264,9 +264,9 @@ void LatticeSynth::Process(double time)
       mNodes[i].corruptionDrive = mCorruptionDrive;
    }
 
-   int bufferSize = GetBuffer()->BufferSize();
+   int bufferSize = target->GetBuffer()->BufferSize();
+   mWriteBuffer.Clear();
    float* out = mWriteBuffer.GetChannel(0);
-   Clear(out, bufferSize);
 
    for (int s = 0; s < bufferSize; ++s)
    {
@@ -343,15 +343,9 @@ void LatticeSynth::Process(double time)
       time += gInvSampleRateMs;
    }
 
-   // Mix into output
-   GetBuffer()->GetChannel(0)->CopyFrom(out, bufferSize);
-   SyncBuffers();
-   GetBuffer()->SetNumActiveChannels(1);
-
-   IAudioReceiver* receiver = GetTarget();
-   if (receiver)
-      Add(receiver->GetBuffer()->GetChannel(0), GetBuffer()->GetChannel(0), bufferSize);
-
+   // Output: follow KarplusStrong pattern
+   GetVizBuffer()->WriteChunk(out, bufferSize, 0);
+   Add(target->GetBuffer()->GetChannel(0), out, bufferSize);
    GetBuffer()->Reset();
 }
 
