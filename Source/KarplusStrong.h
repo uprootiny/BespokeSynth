@@ -74,7 +74,7 @@ private:
    void GetModuleDimensions(float& width, float& height) override
    {
       width = 275;
-      height = 126;
+      height = 190;
    }
 
    PolyphonyMgr mPolyMgr;

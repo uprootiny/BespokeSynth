@@ -175,6 +175,116 @@ void KarplusStrong::DrawModule()
    mExciterDecaySlider->Draw();
 
    mBiquad.Draw();
+
+   // === Vibrating string visualization ===
+   {
+      const float stringX = 5;
+      const float stringY = 130;
+      const float stringW = 265;
+      const float stringH = 50;
+
+      // Dark inset background
+      {
+         NVGpaint bg = nvgLinearGradient(gNanoVG, stringX, stringY, stringX, stringY + stringH,
+            nvgRGBA(8, 10, 15, (int)(gModuleDrawAlpha * .9f)),
+            nvgRGBA(4, 5, 8, (int)(gModuleDrawAlpha * .9f)));
+         nvgBeginPath(gNanoVG);
+         nvgRoundedRect(gNanoVG, stringX, stringY, stringW, stringH, gCornerRoundness * 2);
+         nvgFillPaint(gNanoVG, bg);
+         nvgFill(gNanoVG);
+      }
+
+      // Bridge endpoints (fixed nodes)
+      ofColor color = GetColor(kModuleCategory_Synth);
+      ofSetColor(color.r, color.g, color.b, gModuleDrawAlpha * .6f);
+      ofFill();
+      ofCircle(stringX + 4, stringY + stringH / 2, 3);
+      ofCircle(stringX + stringW - 4, stringY + stringH / 2, 3);
+
+      // Draw vibrating string from delay buffer of the most active voice
+      float bestActivity = 0;
+      KarplusStrongVoice* activeVoice = nullptr;
+      for (int i = 0; i < kNumVoices; ++i)
+      {
+         const auto& info = mPolyMgr.GetVoiceInfo(i);
+         if (info.mActivity > bestActivity && info.mVoice != nullptr)
+         {
+            auto* ksVoice = dynamic_cast<KarplusStrongVoice*>(info.mVoice);
+            if (ksVoice && ksVoice->IsActive())
+            {
+               bestActivity = info.mActivity;
+               activeVoice = ksVoice;
+            }
+         }
+      }
+
+      if (activeVoice != nullptr)
+      {
+         RollingBuffer& buf = activeVoice->GetDelayBuffer();
+         int bufSize = buf.Size();
+         if (bufSize > 0)
+         {
+            float amplitude = ofClamp(bestActivity * 3, 0, 1);
+
+            // Filled string displacement with gradient
+            nvgBeginPath(gNanoVG);
+            nvgMoveTo(gNanoVG, stringX + 4, stringY + stringH / 2);
+            for (int i = 0; i < (int)stringW - 8; ++i)
+            {
+               float t = (float)i / (stringW - 8);
+               int bufIdx = (int)(t * bufSize) % bufSize;
+               float sample = buf.GetSample(bufIdx, 0);
+               float yOffset = sample * (stringH / 2 - 4) * amplitude;
+               nvgLineTo(gNanoVG, stringX + 4 + i, stringY + stringH / 2 + yOffset);
+            }
+            nvgLineTo(gNanoVG, stringX + stringW - 4, stringY + stringH / 2);
+            nvgLineTo(gNanoVG, stringX + stringW - 4, stringY + stringH);
+            nvgLineTo(gNanoVG, stringX + 4, stringY + stringH);
+            nvgClosePath(gNanoVG);
+            {
+               NVGpaint fill = nvgLinearGradient(gNanoVG, stringX, stringY, stringX, stringY + stringH,
+                  nvgRGBA(color.r, color.g, color.b, (int)(amplitude * gModuleDrawAlpha * .25f)),
+                  nvgRGBA(color.r * .2f, color.g * .2f, color.b * .2f, (int)(amplitude * gModuleDrawAlpha * .08f)));
+               nvgFillPaint(gNanoVG, fill);
+               nvgFill(gNanoVG);
+            }
+
+            // String stroke
+            ofPushStyle();
+            ofSetColor(color.r, color.g, color.b, amplitude * gModuleDrawAlpha);
+            ofSetLineWidth(1.5f);
+            ofNoFill();
+            ofBeginShape();
+            for (int i = 0; i < (int)stringW - 8; ++i)
+            {
+               float t = (float)i / (stringW - 8);
+               int bufIdx = (int)(t * bufSize) % bufSize;
+               float sample = buf.GetSample(bufIdx, 0);
+               float yOffset = sample * (stringH / 2 - 4) * amplitude;
+               ofVertex(stringX + 4 + i, stringY + stringH / 2 + yOffset);
+            }
+            ofEndShape(false);
+            ofPopStyle();
+
+            // Center rest line
+            ofSetColor(255, 255, 255, gModuleDrawAlpha * .08f);
+            ofSetLineWidth(.5f);
+            ofLine(stringX + 6, stringY + stringH / 2, stringX + stringW - 6, stringY + stringH / 2);
+         }
+      }
+      else
+      {
+         // Resting string — thin horizontal line
+         ofSetColor(color.r * .4f, color.g * .4f, color.b * .4f, gModuleDrawAlpha * .5f);
+         ofSetLineWidth(1);
+         ofLine(stringX + 6, stringY + stringH / 2, stringX + stringW - 6, stringY + stringH / 2);
+
+         // Rest position center line
+         ofSetColor(255, 255, 255, gModuleDrawAlpha * .05f);
+         ofSetLineWidth(.5f);
+         ofLine(stringX + 6, stringY + stringH / 2, stringX + stringW - 6, stringY + stringH / 2);
+      }
+   }
 }
 
 void KarplusStrong::DrawModuleUnclipped()

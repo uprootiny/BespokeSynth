@@ -79,6 +79,10 @@ public:
    void SetVoiceParams(IVoiceParams* params) override;
    bool IsDone(double time) override;
 
+   // Visualization access
+   RollingBuffer& GetDelayBuffer() { return mBuffer; }
+   bool IsActive() const { return mActive; }
+
 private:
    void DoParameterUpdate(int samplesIn,
                           int oversampling,
