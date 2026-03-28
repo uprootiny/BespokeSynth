@@ -58,11 +58,11 @@ jobs:
           new = '        // CGWindowListCreateImage was obsoleted in macOS 15 SDK.\n       #if defined (MAC_OS_VERSION_15_0) && MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_VERSION_15_0\n        return {};\n       #else'
           assert old in src, 'Could not find CGWindowListCreateImage comment block'
           src = src.replace(old, new)
-          # Add closing #endif after return result
-          old2 = '        return result;\n    }'
-          new2 = '        return result;\n       #endif\n    }'
-          # Only replace the first occurrence (in createNSWindowSnapshot)
-          src = src.replace(old2, new2, 1)
+          # Add closing #endif after 'CGImageRelease (screenShot)' return result block
+          old2 = '        CGImageRelease (screenShot);\n\n        return result;\n    }\n}'
+          new2 = '        CGImageRelease (screenShot);\n\n        return result;\n       #endif\n    }\n}'
+          assert old2 in src, 'Could not find CGImageRelease return result block'
+          src = src.replace(old2, new2)
           with open('$FILE', 'w') as f:
               f.write(src)
           print('JUCE macOS 15 patch applied')
