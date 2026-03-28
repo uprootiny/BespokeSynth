@@ -133,10 +133,55 @@ The generic `me.set()/me.get()` works for any control path, but dedicated bindin
 
 ---
 
-## 6. Quick Wins (< 30 minutes each)
+## 6. Performance Bottlenecks
 
-1. **VinylTempoControl.h** — set `mHasSignal = true` in the signal detection path
-2. **VinylTempoControl.cpp** — move `data[8196]` to heap: `auto data = std::make_unique<short[]>(8196);`
-3. **ScriptModule_PythonInterface.i** — change `return 0.0f` to `throw std::runtime_error("Control not found: " + path)`
+### Audio thread mutex blocks all processing
+- **File:** `ModularSynth.cpp:2327`
+- `ScopedMutex` held for entire AudioOut callback — all modules process while locked
+- If UI thread touches modules, audio stalls
+- **Fix:** Fine-grained locking or defer topology changes
+
+### gTime is not atomic (race condition)
+- **File:** `SynthGlobals.h:99`
+- `double gTime` written on audio thread, read on main thread
+- 64-bit double may not be atomic on all architectures
+- **Fix:** `std::atomic<double>` with relaxed ordering
+
+### Oversampling uses division in inner loop (FIXED)
+- **File:** `ModularSynth.cpp:2381`
+- Was: `sample / oversampling` — 5-10 cycle int-to-float division per sample
+- Now: `sample * invOversampling` — 1 cycle multiplication
+
+### EffectChain copies buffer even at 100% wet (FIXED)
+- **File:** `EffectChain.cpp:137`
+- Was: `mDryBuffer.CopyFrom()` called unconditionally per effect
+- Now: Skipped when `mDryWetLevels[i] >= 1.0f` (the common case)
+
+### 1MB global work buffer — cache contention
+- **File:** `SynthGlobals.h:87`
+- `kWorkBufferSize = 262,144 floats` — exceeds L2 cache
+- Used by EffectChain and multiple modules simultaneously
+- **Fix:** Thread-local or cache-aligned smaller buffers
+
+### Free-running render loop — no dirty rect tracking
+- **File:** `ModularSynth.cpp:525`
+- Every module redrawn every frame, no vsync
+- 100 patch cables = 300-400 NanoVG draw calls per frame
+- **Fix:** Dirty rectangle tracking, vsync to 60Hz
+
+### O(n²) dependency graph with dynamic_cast
+- **File:** `ModularSynth.cpp:2476-2545`
+- `dynamic_cast` in nested loop over all sources
+- 64 modules = 4096 comparisons with RTTI
+- Called during patch loading
+- **Fix:** Cache relationships, use identity maps
+
+## 7. Quick Wins (< 30 minutes each)
+
+1. ~~**VinylTempoControl.h** — set `mHasSignal = true`~~ DONE
+2. ~~**VinylTempoControl.cpp** — move `data[8196]` to heap~~ DONE
+3. ~~**ScriptModule_PythonInterface.i** — throw on invalid control path~~ DONE
 4. **MainComponent.cpp** — remove `#include "Push2Control.h" //TODO(Ryan) remove`
 5. **StutterControl.cpp** — remove unreachable `assert(false)` after switch default
+6. ~~**ModularSynth.cpp:2381** — division → multiplication in oversampling~~ DONE
+7. ~~**EffectChain.cpp:137** — skip dry buffer copy when 100% wet~~ DONE

@@ -134,24 +134,30 @@ void EffectChain::Process(double time)
 
       for (int i = 0; i < mEffects.size(); ++i)
       {
-         mDryBuffer.CopyFrom(GetBuffer());
+         bool needsDryWetMix = (mDryWetLevels[i] < 1.0f);
+
+         if (needsDryWetMix)
+            mDryBuffer.CopyFrom(GetBuffer());
 
          mEffects[i]->ProcessAudio(time, GetBuffer());
 
-         float* dryWetBuffer = gWorkBuffer;
-         float* invDryWetBuffer = gWorkBuffer + bufferSize;
-         for (int j = 0; j < bufferSize; ++j)
+         if (needsDryWetMix)
          {
-            ComputeSliders(j);
-            dryWetBuffer[j] = mDryWetLevels[i];
-            invDryWetBuffer[j] = 1.0f - mDryWetLevels[i];
-         }
+            float* dryWetBuffer = gWorkBuffer;
+            float* invDryWetBuffer = gWorkBuffer + bufferSize;
+            for (int j = 0; j < bufferSize; ++j)
+            {
+               ComputeSliders(j);
+               dryWetBuffer[j] = mDryWetLevels[i];
+               invDryWetBuffer[j] = 1.0f - mDryWetLevels[i];
+            }
 
-         for (int ch = 0; ch < GetBuffer()->NumActiveChannels(); ++ch)
-         {
-            Mult(mDryBuffer.GetChannel(ch), invDryWetBuffer, bufferSize);
-            Mult(GetBuffer()->GetChannel(ch), dryWetBuffer, bufferSize);
-            Add(GetBuffer()->GetChannel(ch), mDryBuffer.GetChannel(ch), bufferSize);
+            for (int ch = 0; ch < GetBuffer()->NumActiveChannels(); ++ch)
+            {
+               Mult(mDryBuffer.GetChannel(ch), invDryWetBuffer, bufferSize);
+               Mult(GetBuffer()->GetChannel(ch), dryWetBuffer, bufferSize);
+               Add(GetBuffer()->GetChannel(ch), mDryBuffer.GetChannel(ch), bufferSize);
+            }
          }
       }
 

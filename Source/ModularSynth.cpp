@@ -2372,13 +2372,14 @@ void ModularSynth::AudioOut(float* const* output, int bufferSize, int nChannels)
          }
          else
          {
+            float invOversampling = 1.0f / oversampling;
             for (int sampleIndex = 0; sampleIndex < gBufferSize / oversampling; ++sampleIndex)
             {
                output[ch][sampleIndex] = 0;
                for (int subsampleIndex = 0; subsampleIndex < oversampling; ++subsampleIndex)
                {
                   float sample = mOutputBuffers[ch][sampleIndex * oversampling + subsampleIndex];
-                  output[ch][sampleIndex] += sample / oversampling;
+                  output[ch][sampleIndex] += sample * invOversampling;
                   if (ch < 2)
                      mGlobalRecordBuffer->Write(sample, ch);
                }
