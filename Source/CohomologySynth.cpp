@@ -299,53 +299,71 @@ void CohomologySynth::ComputeLaplacianSpectrum()
       D[i] = L[i][i];
    }
 
-   // Jacobi rotations (100 sweeps is overkill for N≤12, but guarantees convergence)
-   for (int sweep = 0; sweep < 100; ++sweep)
+   // Jacobi eigendecomposition: proper cyclic-by-row sweep.
+   // For a real symmetric matrix A, find orthogonal V such that V^T A V = D.
+   // Each Givens rotation zeroes one off-diagonal element.
+   // Handles degenerate eigenvalues correctly (converges for any symmetric matrix).
+   for (int sweep = 0; sweep < 200; ++sweep)
    {
-      float offDiagSum = 0;
+      // Check convergence: sum of squared off-diagonal elements
+      float offDiag = 0;
       for (int i = 0; i < N; ++i)
          for (int j = i + 1; j < N; ++j)
-            offDiagSum += L[i][j] * L[i][j];
-      if (offDiagSum < 1e-10f) break; // converged
+            offDiag += L[i][j] * L[i][j];
+      if (offDiag < 1e-12f) break;
 
-      for (int p = 0; p < N; ++p)
+      for (int p = 0; p < N - 1; ++p)
       {
          for (int q = p + 1; q < N; ++q)
          {
-            if (fabsf(L[p][q]) < 1e-12f) continue;
+            float apq = L[p][q];
+            if (fabsf(apq) < 1e-14f) continue;
 
-            float theta;
-            if (fabsf(L[p][p] - L[q][q]) < 1e-12f)
-               theta = FPI / 4;
+            // Compute rotation angle to zero L[p][q]
+            float app = L[p][p];
+            float aqq = L[q][q];
+            float tau, t, c, s;
+
+            if (fabsf(app - aqq) < 1e-14f)
+            {
+               // Degenerate case: eigenvalues equal, use 45 degrees
+               t = 1.0f;
+            }
             else
-               theta = 0.5f * atanf(2.0f * L[p][q] / (L[p][p] - L[q][q]));
-
-            float c = cosf(theta);
-            float s = sinf(theta);
-
-            // Apply rotation to L
-            for (int i = 0; i < N; ++i)
             {
-               float lip = L[i][p];
-               float liq = L[i][q];
-               L[i][p] = c * lip + s * liq;
-               L[i][q] = -s * lip + c * liq;
+               tau = (aqq - app) / (2.0f * apq);
+               // Choose the smaller root for numerical stability
+               t = (tau >= 0) ? 1.0f / (tau + sqrtf(1.0f + tau * tau))
+                              : -1.0f / (-tau + sqrtf(1.0f + tau * tau));
             }
-            for (int j = 0; j < N; ++j)
+            c = 1.0f / sqrtf(1.0f + t * t);
+            s = t * c;
+
+            // Apply similarity transform: L' = G^T L G
+            // This is the proper two-sided Jacobi rotation.
+            // Update rows/cols p and q of L simultaneously.
+            for (int r = 0; r < N; ++r)
             {
-               float lpj = L[p][j];
-               float lqj = L[q][j];
-               L[p][j] = c * lpj + s * lqj;
-               L[q][j] = -s * lpj + c * lqj;
+               if (r == p || r == q) continue;
+               float lrp = L[r][p];
+               float lrq = L[r][q];
+               L[r][p] = L[p][r] = c * lrp - s * lrq;
+               L[r][q] = L[q][r] = s * lrp + c * lrq;
             }
 
-            // Apply rotation to V
+            float newApp = c * c * app - 2 * s * c * apq + s * s * aqq;
+            float newAqq = s * s * app + 2 * s * c * apq + c * c * aqq;
+            L[p][p] = newApp;
+            L[q][q] = newAqq;
+            L[p][q] = L[q][p] = 0.0f; // exactly zero by construction
+
+            // Accumulate eigenvectors: V = V * G
             for (int i = 0; i < N; ++i)
             {
                float vip = V[i][p];
                float viq = V[i][q];
-               V[i][p] = c * vip + s * viq;
-               V[i][q] = -s * vip + c * viq;
+               V[i][p] = c * vip - s * viq;
+               V[i][q] = s * vip + c * viq;
             }
          }
       }
@@ -420,13 +438,41 @@ void CohomologySynth::ComputeLaplacianSpectrum()
 
    int rankDelta0 = computeRank(mDelta0, mNumEdges, mNumVertices);
 
-   // For δ¹ rank, need a version that takes the right array sizes
-   // δ¹ is N₂ × N₁. Reinterpret mDelta1 for the rank computation.
-   float delta1ForRank[kMaxFaces][kMaxVertices]{}; // reuse vertex-sized cols (kMaxEdges ≤ kMaxVertices*2 but this is fine for small N)
-   for (int i = 0; i < mNumFaces; ++i)
-      for (int j = 0; j < mNumEdges; ++j)
-         if (j < kMaxVertices) delta1ForRank[i][j] = mDelta1[i][j];
-   int rankDelta1 = computeRank(delta1ForRank, mNumFaces, std::min(mNumEdges, (int)kMaxVertices));
+   // Compute rank of δ¹ (N₂ × N₁ matrix) — need separate rank function for edge-width arrays
+   auto computeRankEdge = [](float mat[][kMaxEdges], int rows, int cols) -> int {
+      float work[kMaxFaces][kMaxEdges];
+      for (int i = 0; i < rows; ++i)
+         for (int j = 0; j < cols; ++j)
+            work[i][j] = mat[i][j];
+
+      int rank = 0;
+      for (int col = 0; col < cols && rank < rows; ++col)
+      {
+         int pivot = -1;
+         float maxVal = 1e-6f;
+         for (int row = rank; row < rows; ++row)
+         {
+            if (fabsf(work[row][col]) > maxVal)
+            {
+               maxVal = fabsf(work[row][col]);
+               pivot = row;
+            }
+         }
+         if (pivot < 0) continue;
+         for (int j = 0; j < cols; ++j)
+            std::swap(work[rank][j], work[pivot][j]);
+         float pivotVal = work[rank][col];
+         for (int row = rank + 1; row < rows; ++row)
+         {
+            float factor = work[row][col] / pivotVal;
+            for (int j = col; j < cols; ++j)
+               work[row][j] -= factor * work[rank][j];
+         }
+         rank++;
+      }
+      return rank;
+   };
+   int rankDelta1 = computeRankEdge(mDelta1, mNumFaces, mNumEdges);
 
    mBetti[0] = mNumVertices - rankDelta0;        // connected components
    mBetti[1] = mNumEdges - rankDelta0 - rankDelta1; // independent loops

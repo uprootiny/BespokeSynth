@@ -277,8 +277,8 @@ void LatticeSynth::Process(double time)
       if (mExciteAmount > 0)
       {
          float excite = mExciteAmount * mEnvelopeValue;
-         // Noise burst excitation (pluck-like)
-         excite *= ((float)rand() / RAND_MAX * 2.0f - 1.0f);
+         // Noise burst excitation (pluck-like) using deterministic PRNG
+         excite *= (gRandom() / (float)gRandom.max() * 2.0f - 1.0f);
          ExciteNode(mExciteNode, excite);
          mExciteAmount *= 0.99f; // decay excitation over ~100 samples
          if (mExciteAmount < 0.001f)
@@ -289,21 +289,38 @@ void LatticeSynth::Process(double time)
       for (int i = 0; i < mNumNodes; ++i)
          ScatterAtNode(i);
 
-      // Propagate forward waves (i → i+1)
+      // Snapshot node states BEFORE propagation to avoid read-after-write hazard.
+      // Without this, PropagateForward(0,1) modifies node[1].forward before
+      // PropagateForward(1,2) reads it — corrupting the waveguide.
+      float fwdSnapshot[kMaxLatticeNodes];
+      float bwdSnapshot[kMaxLatticeNodes];
+      for (int i = 0; i < mNumNodes; ++i)
+      {
+         fwdSnapshot[i] = mNodes[i].forward;
+         bwdSnapshot[i] = mNodes[i].backward;
+      }
+
       bool isRing = (mBoundary == kBoundary_Ring || mBoundary == kBoundary_Mobius);
       int propagateCount = isRing ? mNumNodes : mNumNodes - 1;
 
+      // Propagate from snapshot: write delayed values into delay lines,
+      // read delayed values into next node's forward/backward
       for (int i = 0; i < propagateCount; ++i)
       {
          int next = (i + 1) % mNumNodes;
-         PropagateForward(i, next);
+         // Forward: node i → delay → node next
+         auto& src = mNodes[i];
+         src.delayBuffer[src.writePos] = fwdSnapshot[i];
+         mNodes[next].forward = ReadDelay(src.delayBuffer, src.writePos, src.delayLength, src.delayLength - 1);
       }
 
-      // Propagate backward waves (i → i-1)
       for (int i = propagateCount - 1; i >= 0; --i)
       {
          int next = (i + 1) % mNumNodes;
-         PropagateBackward(next, i);
+         // Backward: node next → delay → node i
+         auto& src = mNodes[next];
+         src.delayBufferBack[src.writePos] = bwdSnapshot[next];
+         mNodes[i].backward = ReadDelay(src.delayBufferBack, src.writePos, src.delayLength, src.delayLength - 1);
       }
 
       // Möbius: invert phase at the wrapping point
@@ -319,7 +336,7 @@ void LatticeSynth::Process(double time)
 
       // Advance write positions
       for (int i = 0; i < mNumNodes; ++i)
-         mNodes[i].writePos = (mNodes[i].writePos + 1) % mNodes[i].delayLength;
+         mNodes[i].writePos = (mNodes[i].writePos + 1) % std::max(1, mNodes[i].delayLength);
 
       // Output: sum of all forward waves at a pickup point (node 0)
       float output = 0;

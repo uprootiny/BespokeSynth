@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2. Cohomology &amp; Sound — Topology Suite</title>
+<style>
+  :root { --bg:#0a0b10; --surface:#12131a; --border:#1e2030; --text:#c8ccd4; --text-dim:#6b7084; --accent:#4fc1a6; --accent2:#6b8aed; --accent3:#e0a060; --code-bg:#1a1b26; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'SF Mono','Fira Code','Consolas',monospace; background:var(--bg); color:var(--text); line-height:1.7; max-width:900px; margin:0 auto; padding:40px 20px; }
+  h1 { color:var(--accent); font-size:1.6em; margin-bottom:8px; font-weight:400; }
+  h2 { color:var(--accent2); font-size:1.2em; margin-top:40px; margin-bottom:14px; font-weight:400; border-bottom:1px solid var(--border); padding-bottom:6px; }
+  h3 { color:var(--accent3); font-size:1em; margin-top:28px; margin-bottom:10px; font-weight:400; }
+  p, li { margin-bottom:12px; }
+  ul, ol { margin:0 0 16px 24px; }
+  code { background:var(--code-bg); padding:2px 6px; border-radius:3px; font-size:0.9em; }
+  pre { background:var(--code-bg); padding:16px; border-radius:6px; overflow-x:auto; margin:16px 0; border:1px solid var(--border); }
+  pre code { padding:0; background:none; }
+  a { color:var(--accent); text-decoration:none; }
+  .nav { display:flex; gap:12px; margin:20px 0 36px; font-size:0.9em; }
+  .nav a { background:var(--surface); padding:6px 12px; border-radius:4px; border:1px solid var(--border); }
+  .note { background:var(--surface); border-left:3px solid var(--accent); padding:12px 16px; margin:16px 0; border-radius:0 6px 6px 0; }
+  .def { background:var(--surface); border-left:3px solid var(--accent2); padding:12px 16px; margin:16px 0; border-radius:0 6px 6px 0; }
+  .ex { background:var(--surface); border-left:3px solid var(--accent3); padding:12px 16px; margin:16px 0; border-radius:0 6px 6px 0; }
+  table { border-collapse:collapse; width:100%; margin:16px 0; }
+  th, td { padding:8px 12px; text-align:left; border-bottom:1px solid var(--border); }
+  th { color:var(--accent); font-weight:400; }
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <a href="01-simplicial-complexes.html">&larr; Simplicial Complexes</a>
+  <a href="index.html">Index</a>
+  <a href="03-lattice-waveguides.html">Next: Lattice Waveguides &rarr;</a>
+</div>
+
+<h1>2. Cohomology &amp; Sound</h1>
+<p>How the algebra of cochains becomes the physics of resonance.</p>
+
+<h2>2.1 Cochains: functions on simplices</h2>
+
+<p>A <em>p-cochain</em> is a function that assigns a real number to each p-simplex. The vector space of all p-cochains on K is written C<sup>p</sup>(K; &Ropf;).</p>
+
+<div class="def">
+<strong>In DSP terms:</strong><br>
+&bull; A 0-cochain f &isin; C<sup>0</sup> assigns a pressure to each vertex. This is the signal you hear.<br>
+&bull; A 1-cochain g &isin; C<sup>1</sup> assigns a flow to each edge. This is how energy propagates.<br>
+&bull; A 2-cochain h &isin; C<sup>2</sup> assigns a pressure to each face. This is a cavity resonance.
+</div>
+
+<h2>2.2 The coboundary operator &delta;</h2>
+
+<p>The coboundary &delta;<sup>p</sup>: C<sup>p</sup> &rarr; C<sup>p+1</sup> is the transpose of the boundary operator. It takes a function on p-simplices and produces a function on (p+1)-simplices.</p>
+
+<h3>&delta;<sup>0</sup>: gradient (vertices &rarr; edges)</h3>
+
+<pre><code>(&delta;<sup>0</sup>f)[i,j] = f(j) - f(i)</code></pre>
+
+<p>If vertex j has pressure 5 and vertex i has pressure 3, the edge [i,j] carries a flow of 2. This is exactly the discrete gradient.</p>
+
+<h3>&delta;<sup>1</sup>: curl (edges &rarr; faces)</h3>
+
+<pre><code>(&delta;<sup>1</sup>g)[i,j,k] = g[j,k] - g[i,k] + g[i,j]</code></pre>
+
+<p>This measures the net circulation around a triangle. If the flows around a face sum to zero, there's no curl &mdash; the flow is irrotational. If they don't, there's a vortex.</p>
+
+<h3>The key property: &delta;&delta; = 0</h3>
+
+<p>Just like &part;&part; = 0, we have &delta;<sup>1</sup> &delta;<sup>0</sup> = 0. The curl of a gradient is zero. This is the discrete Poincar&eacute; lemma.</p>
+
+<h2>2.3 Cohomology: what's closed but not exact?</h2>
+
+<div class="def">
+<strong>Definition.</strong> The p-th cohomology group is:<br>
+<br>
+H<sup>p</sup>(K; &Ropf;) = ker(&delta;<sup>p</sup>) / im(&delta;<sup>p-1</sup>)<br>
+<br>
+= {p-cochains killed by &delta;} / {p-cochains that came from &delta; applied to something lower}
+</div>
+
+<p>The dimension of H<sup>p</sup> is the <strong>Betti number</strong> &beta;<sub>p</sub>.</p>
+
+<h3>What the Betti numbers count</h3>
+
+<table>
+<tr><th>&beta;<sub>p</sub></th><th>Counts</th><th>Sound</th><th>Example</th></tr>
+<tr>
+  <td>&beta;<sub>0</sub></td>
+  <td>Connected components</td>
+  <td>Independent fundamentals</td>
+  <td>&beta;<sub>0</sub>=1: one pitch. &beta;<sub>0</sub>=2: two independent pitches.</td>
+</tr>
+<tr>
+  <td>&beta;<sub>1</sub></td>
+  <td>Independent loops</td>
+  <td>Self-sustaining resonances</td>
+  <td>Torus has &beta;<sub>1</sub>=2: two loop modes that ring independently.</td>
+</tr>
+<tr>
+  <td>&beta;<sub>2</sub></td>
+  <td>Enclosed cavities</td>
+  <td>Formant/breathing modes</td>
+  <td>Tetrahedron has &beta;<sub>2</sub>=1: one cavity that "breathes".</td>
+</tr>
+</table>
+
+<h2>2.4 The Hodge Laplacian</h2>
+
+<p>The <strong>adjoint</strong> &delta;* goes backwards: it's the matrix transpose of &delta;. Physically, &delta;<sup>0</sup>* is divergence (how much flow enters a vertex), and &delta;<sup>1</sup>* is how much face pressure acts on an edge.</p>
+
+<div class="def">
+<strong>Definition.</strong> The Hodge Laplacian on p-cochains is:<br>
+<br>
+&Delta;<sub>p</sub> = &delta;<sup>p-1</sup>(&delta;<sup>p-1</sup>)* + (&delta;<sup>p</sup>)*&delta;<sup>p</sup><br>
+<br>
+For p=0 (the case we implement): &Delta;<sub>0</sub> = (&delta;<sup>0</sup>)*&delta;<sup>0</sup> = the graph Laplacian.
+</div>
+
+<h3>The Hodge theorem</h3>
+
+<p>The kernel of &Delta;<sub>p</sub> (its zero eigenspace) is isomorphic to H<sup>p</sup>(K; &Ropf;). The harmonic forms &mdash; eigenvectors with eigenvalue 0 &mdash; ARE the cohomology classes.</p>
+
+<p>The nonzero eigenvalues are the resonant frequencies squared. The eigenvectors are the mode shapes.</p>
+
+<h2>2.5 From eigenvalues to frequencies</h2>
+
+<p>If &lambda;<sub>1</sub> &le; &lambda;<sub>2</sub> &le; ... are the nonzero eigenvalues of &Delta;<sub>0</sub>, then the resonant frequencies are:</p>
+
+<pre><code>f_k = f_base * sqrt(&lambda;_k) / sqrt(&lambda;_1)</code></pre>
+
+<p>where f_base is the MIDI pitch you play. The ratios &radic;&lambda;<sub>k</sub>/&radic;&lambda;<sub>1</sub> are determined purely by topology. Different complexes have different ratios &mdash; different timbres.</p>
+
+<div class="ex">
+<strong>Example: Tetrahedron.</strong><br>
+Graph Laplacian eigenvalues: 0, 4, 4, 4 (one zero for &beta;<sub>0</sub>=1, three degenerate nonzero).<br>
+All nonzero eigenvalues are equal &rarr; all modes have the same frequency.<br>
+Sound: a pure tone with three-fold degeneracy (three modes at the same pitch but different shapes).<br>
+When you excite at a vertex, you hear a single pitch with a specific spatial character.
+</div>
+
+<div class="ex">
+<strong>Example: Torus (7 vertices).</strong><br>
+Eigenvalues: 0, 0.75, 0.75, 2.5, 2.5, 4.25, 4.25 (approximate).<br>
+Ratios: 1 : 1 : 1.83 : 1.83 : 2.38 : 2.38<br>
+Sound: inharmonic spectrum with paired modes (from the two-fold symmetry of the torus).<br>
+Richer, more complex timbre than the tetrahedron.
+</div>
+
+<h2>2.6 Computation in code</h2>
+
+<pre><code>// Betti numbers via rank-nullity on coboundary matrices
+
+int rankDelta0 = gaussianRank(delta0, numEdges, numVertices);
+int rankDelta1 = gaussianRank(delta1, numFaces, numEdges);
+
+beta[0] = numVertices - rankDelta0;   // connected components
+beta[1] = numEdges - rankDelta0 - rankDelta1;  // loops
+beta[2] = numFaces - rankDelta1;      // cavities</code></pre>
+
+<p>This is the rank-nullity theorem applied twice:</p>
+<ul>
+<li>&beta;<sub>0</sub> = nullity(&delta;<sup>0</sup>) = N<sub>0</sub> - rank(&delta;<sup>0</sup>)</li>
+<li>&beta;<sub>1</sub> = nullity(&delta;<sup>1</sup>) - rank(&delta;<sup>0</sup>) = (N<sub>1</sub> - rank(&delta;<sup>1</sup>)) - rank(&delta;<sup>0</sup>)</li>
+<li>&beta;<sub>2</sub> = nullity(&delta;<sup>2</sup>) = N<sub>2</sub> - rank(&delta;<sup>1</sup>) (since &delta;<sup>2</sup> = 0 for our 2-complexes)</li>
+</ul>
+
+<div class="note">
+<strong>Computational cost:</strong> Gaussian elimination is O(N&sup3;). For N &le; 12 vertices this takes microseconds. We compute it once when the topology changes, then synthesize per sample using only the cached eigenvalues and eigenvectors &mdash; O(modes) per sample, where modes &le; 12.
+</div>
+
+<h2>2.7 What the math forces on the DSP</h2>
+
+<p>The Betti numbers aren't decorative. They constrain the DSP in precise ways:</p>
+
+<ol>
+<li><strong>&beta;<sub>0</sub> = 1</strong> means there's exactly one zero eigenvalue. The DC mode. If &beta;<sub>0</sub> > 1, the complex is disconnected and you get independent oscillators &mdash; the synthesis engine must handle multiple fundamentals.</li>
+
+<li><strong>&beta;<sub>1</sub> > 0</strong> means there are loop resonances that don't show up in the vertex Laplacian alone. The edge Laplacian &Delta;<sub>1</sub> has &beta;<sub>1</sub> zero eigenvalues corresponding to harmonic 1-forms. These represent energy that circulates forever in loops. In the LatticeSynth, these are the ring modes.</li>
+
+<li><strong>&beta;<sub>2</sub> > 0</strong> means there are cavity modes. Face pressures can oscillate independently of vertex displacements. These are the "breathing" modes that create formant-like resonances. To hear them, you need the full Hodge Laplacian &Delta;<sub>2</sub>, not just the graph Laplacian.</li>
+</ol>
+
+<p>Currently our CohomologySynth only uses &Delta;<sub>0</sub> (the graph Laplacian). The &beta;<sub>1</sub> and &beta;<sub>2</sub> modes are counted but not synthesized. A complete implementation would compute &Delta;<sub>1</sub> and &Delta;<sub>2</sub> and add their eigenmodes to the output. This is the next step.</p>
+
+<div class="nav">
+  <a href="01-simplicial-complexes.html">&larr; Simplicial Complexes</a>
+  <a href="index.html">Index</a>
+  <a href="03-lattice-waveguides.html">Next: Lattice Waveguides &rarr;</a>
+</div>
+
+</body>
+</html>

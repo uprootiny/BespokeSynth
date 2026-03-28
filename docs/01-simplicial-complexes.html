@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>1. Simplicial Complexes — Topology Suite</title>
+<style>
+  :root { --bg:#0a0b10; --surface:#12131a; --border:#1e2030; --text:#c8ccd4; --text-dim:#6b7084; --accent:#4fc1a6; --accent2:#6b8aed; --accent3:#e0a060; --code-bg:#1a1b26; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'SF Mono','Fira Code','Consolas',monospace; background:var(--bg); color:var(--text); line-height:1.7; max-width:900px; margin:0 auto; padding:40px 20px; }
+  h1 { color:var(--accent); font-size:1.6em; margin-bottom:8px; font-weight:400; }
+  h2 { color:var(--accent2); font-size:1.2em; margin-top:40px; margin-bottom:14px; font-weight:400; border-bottom:1px solid var(--border); padding-bottom:6px; }
+  h3 { color:var(--accent3); font-size:1em; margin-top:28px; margin-bottom:10px; font-weight:400; }
+  p, li { margin-bottom:12px; }
+  ul, ol { margin:0 0 16px 24px; }
+  code { background:var(--code-bg); padding:2px 6px; border-radius:3px; font-size:0.9em; }
+  pre { background:var(--code-bg); padding:16px; border-radius:6px; overflow-x:auto; margin:16px 0; border:1px solid var(--border); }
+  pre code { padding:0; background:none; }
+  a { color:var(--accent); text-decoration:none; }
+  .nav { display:flex; gap:12px; margin:20px 0 36px; font-size:0.9em; }
+  .nav a { background:var(--surface); padding:6px 12px; border-radius:4px; border:1px solid var(--border); }
+  .note { background:var(--surface); border-left:3px solid var(--accent); padding:12px 16px; margin:16px 0; border-radius:0 6px 6px 0; }
+  .def { background:var(--surface); border-left:3px solid var(--accent2); padding:12px 16px; margin:16px 0; border-radius:0 6px 6px 0; }
+  .ex { background:var(--surface); border-left:3px solid var(--accent3); padding:12px 16px; margin:16px 0; border-radius:0 6px 6px 0; }
+  table { border-collapse:collapse; width:100%; margin:16px 0; }
+  th, td { padding:8px 12px; text-align:left; border-bottom:1px solid var(--border); }
+  th { color:var(--accent); font-weight:400; }
+  .math { font-style:italic; color:var(--accent2); }
+  svg { display:block; margin:20px auto; }
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <a href="index.html">&larr; Index</a>
+  <a href="02-cohomology.html">Next: Cohomology &rarr;</a>
+</div>
+
+<h1>1. Simplicial Complexes</h1>
+<p>Building spaces from triangles, and understanding why it matters for sound.</p>
+
+<h2>1.1 What is a simplex?</h2>
+
+<div class="def">
+<strong>Definition.</strong> A <em>p-simplex</em> is the convex hull of p+1 points in general position.<br>
+&bull; 0-simplex: a point (vertex)<br>
+&bull; 1-simplex: a line segment (edge)<br>
+&bull; 2-simplex: a filled triangle (face)<br>
+&bull; 3-simplex: a filled tetrahedron (but we won't need these)
+</div>
+
+<p>We write a p-simplex as an ordered list of its vertices: &sigma; = [v<sub>0</sub>, v<sub>1</sub>, ..., v<sub>p</sub>].</p>
+
+<svg width="400" height="150" viewBox="0 0 400 150">
+  <!-- 0-simplex -->
+  <circle cx="50" cy="75" r="6" fill="#4fc1a6"/>
+  <text x="50" y="130" fill="#6b7084" text-anchor="middle" font-family="monospace" font-size="12">0-simplex</text>
+
+  <!-- 1-simplex -->
+  <line x1="130" y1="75" x2="210" y2="75" stroke="#6b8aed" stroke-width="2"/>
+  <circle cx="130" cy="75" r="5" fill="#4fc1a6"/>
+  <circle cx="210" cy="75" r="5" fill="#4fc1a6"/>
+  <text x="170" y="130" fill="#6b7084" text-anchor="middle" font-family="monospace" font-size="12">1-simplex</text>
+
+  <!-- 2-simplex -->
+  <polygon points="310,30 260,120 360,120" fill="#6b8aed" fill-opacity="0.15" stroke="#6b8aed" stroke-width="2"/>
+  <circle cx="310" cy="30" r="5" fill="#4fc1a6"/>
+  <circle cx="260" cy="120" r="5" fill="#4fc1a6"/>
+  <circle cx="360" cy="120" r="5" fill="#4fc1a6"/>
+  <text x="310" y="145" fill="#6b7084" text-anchor="middle" font-family="monospace" font-size="12">2-simplex</text>
+</svg>
+
+<h2>1.2 Simplicial complexes</h2>
+
+<div class="def">
+<strong>Definition.</strong> A <em>simplicial complex</em> K is a collection of simplices such that:<br>
+1. Every face of a simplex in K is also in K.<br>
+2. The intersection of any two simplices in K is either empty or a face of both.
+</div>
+
+<p>In plain English: if you have a triangle [0,1,2], you must also have the edges [0,1], [0,2], [1,2] and the vertices [0], [1], [2]. No dangling faces.</p>
+
+<div class="ex">
+<strong>Example: Tetrahedron.</strong><br>
+Vertices: {0, 1, 2, 3}<br>
+Edges: {[0,1], [0,2], [0,3], [1,2], [1,3], [2,3]} &mdash; 6 edges<br>
+Faces: {[0,1,2], [0,1,3], [0,2,3], [1,2,3]} &mdash; 4 faces<br>
+<br>
+This is the boundary of a tetrahedron &mdash; a hollow triangular pyramid. It's a triangulation of the 2-sphere S&sup2;.
+</div>
+
+<h2>1.3 The boundary operator</h2>
+
+<p>The boundary of a p-simplex is the alternating sum of its (p-1)-dimensional faces:</p>
+
+<pre><code>&part;[v0, v1, ..., vp] = &sum;_i (-1)^i [v0, ..., v&#770;_i, ..., vp]</code></pre>
+
+<p>where v&#770;<sub>i</sub> means "delete vertex i".</p>
+
+<div class="ex">
+<strong>Example: boundary of an edge.</strong><br>
+&part;[0,1] = [1] - [0]<br>
+<br>
+The boundary of an edge is its two endpoints, with a sign.
+</div>
+
+<div class="ex">
+<strong>Example: boundary of a triangle.</strong><br>
+&part;[0,1,2] = [1,2] - [0,2] + [0,1]<br>
+<br>
+The boundary of a triangle is its three edges, with alternating signs. If you traverse them in order, you go around the triangle.
+</div>
+
+<h3>The fundamental property: &part;&part; = 0</h3>
+
+<p>The boundary of a boundary is always zero. This is not obvious but it's the foundation of everything that follows. It means:</p>
+
+<ul>
+<li>If you take the boundary of a triangle, you get a cycle of edges.</li>
+<li>That cycle has no boundary of its own &mdash; it's closed.</li>
+<li>This "closed things that aren't boundaries" idea IS homology.</li>
+</ul>
+
+<h2>1.4 Why this matters for sound</h2>
+
+<p>A simplicial complex is a space built from discrete pieces. Sound on this space is a function assigning a value (pressure, displacement) to each piece. The boundary operator tells you how these values relate to each other &mdash; how pressure at a vertex creates flow along edges, how flow along edges creates curl around faces.</p>
+
+<p>The dual of the boundary operator is the <strong>coboundary operator</strong> &delta;. It goes the other direction: from vertices to edges, from edges to faces. This is exactly what we need for signal propagation.</p>
+
+<div class="note">
+<strong>DSP interpretation:</strong><br>
+&bull; Vertex values = node amplitudes (what you hear)<br>
+&bull; Edge values = wave flows (how energy moves between nodes)<br>
+&bull; Face values = cavity pressures (what resonates in enclosed regions)<br>
+&bull; &delta; propagates signal upward through dimensions<br>
+&bull; &delta;* propagates signal downward (feedback/reflection)
+</div>
+
+<h2>1.5 In our code</h2>
+
+<pre><code>// Source/CohomologySynth.cpp
+
+void CohomologySynth::AddFace(int v0, int v1, int v2)
+{
+   // Ensure vertices are sorted (canonical orientation)
+   int sorted[3] = { v0, v1, v2 };
+   std::sort(sorted, sorted + 3);
+
+   // A face automatically requires its edges
+   AddEdge(sorted[0], sorted[1]);
+   AddEdge(sorted[1], sorted[2]);
+   AddEdge(sorted[0], sorted[2]);
+
+   mFaces[mNumFaces] = { sorted[0], sorted[1], sorted[2], mNumFaces };
+   mNumFaces++;
+}
+
+void CohomologySynth::ComputeCoboundary0()
+{
+   // &delta;^0: C^0 &rarr; C^1
+   // (&delta;^0 f)[i,j] = f(j) - f(i)  (gradient on edges)
+   for (int e = 0; e < mNumEdges; ++e)
+   {
+      mDelta0[e][mEdges[e].v0] = -1.0f;  // -f(i)
+      mDelta0[e][mEdges[e].v1] = +1.0f;  // +f(j)
+   }
+}</code></pre>
+
+<div class="nav">
+  <a href="index.html">&larr; Index</a>
+  <a href="02-cohomology.html">Next: Cohomology &amp; Sound &rarr;</a>
+</div>
+
+</body>
+</html>
