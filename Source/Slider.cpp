@@ -128,10 +128,18 @@ void FloatSlider::Render()
    IUIControl::GetColors(color, textColor);
 
    ofFill();
-   ofSetColor(0, 0, 0, gModuleDrawAlpha * .5f);
-   ofRect(mX + 1, mY + 1, mWidth, mHeight);
-   ofSetColor(color);
-   ofRect(mX, mY, mWidth, mHeight);
+   // Slider track: subtle inset with gradient for depth
+   ofSetColor(0, 0, 0, gModuleDrawAlpha * .4f);
+   ofRect(mX + 1, mY + 1, mWidth, mHeight, gCornerRoundness * 2);
+   {
+      NVGpaint trackGrad = nvgLinearGradient(gNanoVG, mX, mY, mX, mY + mHeight,
+         nvgRGBA(color.r * .6f, color.g * .6f, color.b * .6f, (int)(gModuleDrawAlpha)),
+         nvgRGBA(color.r * .3f, color.g * .3f, color.b * .3f, (int)(gModuleDrawAlpha)));
+      nvgBeginPath(gNanoVG);
+      nvgRoundedRect(gNanoVG, mX, mY, mWidth, mHeight, gCornerRoundness * 2);
+      nvgFillPaint(gNanoVG, trackGrad);
+      nvgFill(gNanoVG);
+   }
    ofNoFill();
 
    bool showSmoothAdjustmentUI = AdjustSmooth() && (gHoveredUIControl == this || mSmooth > 0);
