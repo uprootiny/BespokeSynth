@@ -235,11 +235,11 @@ void IDrawableModule::DrawFrame(float w, float h, bool drawModule, float& titleB
       }
    }
 
-   const bool kUseDropshadow = false;
+   const bool kUseDropshadow = true;
    if (kUseDropshadow && GetParent() == nullptr && GetModuleCategory() != kModuleCategory_Other)
    {
-      const float shadowSize = 20;
-      float shadowStrength = .2f + highlight;
+      const float shadowSize = 12;
+      float shadowStrength = .15f + highlight;
       NVGpaint shadowPaint = nvgBoxGradient(gNanoVG, -shadowSize / 2, -titleBarHeight - shadowSize / 2, w + shadowSize, h + titleBarHeight + shadowSize, gCornerRoundness * shadowSize * .5f, shadowSize, nvgRGBA(color.r * shadowStrength, color.g * shadowStrength, color.b * shadowStrength, 128), nvgRGBA(0, 0, 0, 0));
       nvgBeginPath(gNanoVG);
       nvgRect(gNanoVG, -shadowSize, -shadowSize - titleBarHeight, w + shadowSize * 2, h + titleBarHeight + shadowSize * 2);
@@ -276,12 +276,15 @@ void IDrawableModule::DrawFrame(float w, float h, bool drawModule, float& titleB
    if (HasTitleBar())
    {
       ofPushStyle();
-      ofSetColor(color, 50);
       ofFill();
-      ofPushMatrix();
-      ofClipWindow(0, -titleBarHeight, w, titleBarHeight, true);
-      ofRect(0, -titleBarHeight, w, titleBarHeight * 2);
-      ofPopMatrix();
+      // Title bar gradient: brighter at top, darker at bottom
+      NVGpaint titleGrad = nvgLinearGradient(gNanoVG, 0, -titleBarHeight, 0, 0,
+         nvgRGBA(color.r * .35f, color.g * .35f, color.b * .35f, 80),
+         nvgRGBA(color.r * .15f, color.g * .15f, color.b * .15f, 50));
+      nvgBeginPath(gNanoVG);
+      nvgRoundedRect(gNanoVG, 0, -titleBarHeight, w, titleBarHeight, gCornerRoundness * 3);
+      nvgFillPaint(gNanoVG, titleGrad);
+      nvgFill(gNanoVG);
 
       if (mEnabledCheckbox)
       {
