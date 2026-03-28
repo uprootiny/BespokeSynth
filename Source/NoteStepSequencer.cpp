@@ -232,6 +232,26 @@ void NoteStepSequencer::DrawModule()
       mGrid->SetMajorColSize(-1);
 
    mGrid->Draw();
+
+   // Playhead column glow for note sequencer
+   {
+      float gridX, gridY;
+      mGrid->GetPosition(gridX, gridY, true);
+      if (mLength > 0)
+      {
+         float colWidth = (float)mGrid->GetWidth() / mLength;
+         float playX = gridX + mArpIndex * colWidth;
+         NVGpaint colGlow = nvgBoxGradient(gNanoVG, playX, gridY, colWidth, mGrid->GetHeight(),
+            0, colWidth * .4f,
+            nvgRGBA(100, 220, 255, (int)(gModuleDrawAlpha * .1f)),
+            nvgRGBA(100, 220, 255, 0));
+         nvgBeginPath(gNanoVG);
+         nvgRect(gNanoVG, playX - colWidth, gridY, colWidth * 3, mGrid->GetHeight());
+         nvgFillPaint(gNanoVG, colGlow);
+         nvgFill(gNanoVG);
+      }
+   }
+
    mVelocityGrid->Draw();
 
    ofPushStyle();

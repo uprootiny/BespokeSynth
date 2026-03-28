@@ -447,6 +447,31 @@ void StepSequencer::DrawModule()
    mVelocityTypeDropdown->SetShowing(mStepVelocityEntryMode == StepVelocityEntryMode::Dropdown);
 
    mGrid->Draw();
+
+   // Playhead column glow
+   {
+      float gridX, gridY;
+      mGrid->GetPosition(gridX, gridY, true);
+      int numSteps = GetNumSteps(mStepInterval, mNumMeasures);
+      if (numSteps > 0)
+      {
+         float colWidth = (float)mGrid->GetWidth() / numSteps;
+         float playX = gridX + mCurrentColumn * colWidth;
+         NVGpaint colGlow = nvgLinearGradient(gNanoVG, playX, gridY, playX + colWidth, gridY,
+            nvgRGBA(255, 255, 255, 0),
+            nvgRGBA(255, 255, 255, 0));
+         // Vertical glow strip for current step
+         colGlow = nvgBoxGradient(gNanoVG, playX, gridY, colWidth, mGrid->GetHeight(),
+            0, colWidth * .5f,
+            nvgRGBA(255, 220, 60, (int)(gModuleDrawAlpha * .12f)),
+            nvgRGBA(255, 220, 60, 0));
+         nvgBeginPath(gNanoVG);
+         nvgRect(gNanoVG, playX - colWidth, gridY, colWidth * 3, mGrid->GetHeight());
+         nvgFillPaint(gNanoVG, colGlow);
+         nvgFill(gNanoVG);
+      }
+   }
+
    mStrengthSlider->Draw();
    mVelocityTypeDropdown->Draw();
    mNumMeasuresSlider->Draw();

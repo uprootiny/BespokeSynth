@@ -651,15 +651,41 @@ void Looper::DrawModule()
 
    assert(mLoopLength > 0);
 
+   // Waveform display background
+   {
+      NVGpaint bg = nvgLinearGradient(gNanoVG, 0, 0, 0, kBufferHeight,
+         nvgRGBA(10, 12, 18, (int)(gModuleDrawAlpha * .8f)),
+         nvgRGBA(5, 6, 10, (int)(gModuleDrawAlpha * .8f)));
+      nvgBeginPath(gNanoVG);
+      nvgRoundedRect(gNanoVG, -1, -1, kBufferWidth + 2, kBufferHeight + 2, gCornerRoundness * 2);
+      nvgFillPaint(gNanoVG, bg);
+      nvgFill(gNanoVG);
+   }
+
    float displayPos = GetActualLoopPos(0);
    mBufferMutex.lock();
    DrawAudioBuffer(kBufferWidth, kBufferHeight, mBuffer, 0, mLoopLength, displayPos, mVol);
    mBufferMutex.unlock();
-   ofSetColor(255, 255, 0, gModuleDrawAlpha);
+
+   // Playhead glow
+   {
+      float playX = displayPos / mLoopLength * kBufferWidth;
+      NVGpaint glow = nvgRadialGradient(gNanoVG, playX, kBufferHeight / 2, 2, 12,
+         nvgRGBA(255, 255, 255, (int)(gModuleDrawAlpha * .3f)),
+         nvgRGBA(255, 255, 255, 0));
+      nvgBeginPath(gNanoVG);
+      nvgRect(gNanoVG, playX - 15, 0, 30, kBufferHeight);
+      nvgFillPaint(gNanoVG, glow);
+      nvgFill(gNanoVG);
+   }
+
+   // Bar dividers with subtler styling
+   ofSetColor(255, 255, 255, gModuleDrawAlpha * .2f);
+   ofSetLineWidth(.5f);
    for (int i = 1; i < mNumBars; ++i)
    {
       float x = kBufferWidth / mNumBars * i;
-      ofLine(x, kBufferHeight / 2 - 5, x, kBufferHeight / 2 + 5);
+      ofLine(x, 2, x, kBufferHeight - 2);
    }
    ofSetColor(255, 255, 255, gModuleDrawAlpha);
 

@@ -284,15 +284,43 @@ void SingleOscillator::DrawModule()
       int height = 36;
       int width = kColumnWidth;
 
-      ofSetColor(100, 100, .8f * gModuleDrawAlpha);
-      ofSetLineWidth(.5f);
-      ofRect(x, y, width, height, 0);
+      // Waveform display background with subtle inset
+      {
+         NVGpaint bg = nvgLinearGradient(gNanoVG, x, y, x, y + height,
+            nvgRGBA(15, 15, 20, (int)(gModuleDrawAlpha * .9f)),
+            nvgRGBA(8, 8, 12, (int)(gModuleDrawAlpha * .9f)));
+         nvgBeginPath(gNanoVG);
+         nvgRoundedRect(gNanoVG, x, y, width, height, gCornerRoundness * 2);
+         nvgFillPaint(gNanoVG, bg);
+         nvgFill(gNanoVG);
+      }
 
-      ofSetColor(245, 58, 0, gModuleDrawAlpha);
-      ofSetLineWidth(1);
+      // Filled waveform with gradient
+      ofColor waveColor = GetColor(kModuleCategory_Synth);
+      nvgBeginPath(gNanoVG);
+      nvgMoveTo(gNanoVG, x, y + height / 2);
+      for (float i = 0; i < width; i += (.25f / gDrawScale))
+      {
+         float phase = i / width * FTWO_PI;
+         phase += gTime * .005f;
+         float value = GetDrawValue(phase);
+         float yPos = ofMap(value, -1, 1, 0, height) + y;
+         nvgLineTo(gNanoVG, i + x, yPos);
+      }
+      nvgLineTo(gNanoVG, x + width, y + height / 2);
+      nvgClosePath(gNanoVG);
+      {
+         NVGpaint waveFill = nvgLinearGradient(gNanoVG, x, y, x, y + height,
+            nvgRGBA(waveColor.r, waveColor.g, waveColor.b, (int)(gModuleDrawAlpha * .4f)),
+            nvgRGBA(waveColor.r * .3f, waveColor.g * .3f, waveColor.b * .3f, (int)(gModuleDrawAlpha * .15f)));
+         nvgFillPaint(gNanoVG, waveFill);
+         nvgFill(gNanoVG);
+      }
 
+      // Waveform stroke on top
+      ofSetColor(waveColor.r, waveColor.g, waveColor.b, gModuleDrawAlpha);
+      ofSetLineWidth(1.5f);
       ofBeginShape();
-
       for (float i = 0; i < width; i += (.25f / gDrawScale))
       {
          float phase = i / width * FTWO_PI;
@@ -301,6 +329,12 @@ void SingleOscillator::DrawModule()
          ofVertex(i + x, ofMap(value, -1, 1, 0, height) + y);
       }
       ofEndShape(false);
+
+      // Center line
+      ofSetColor(255, 255, 255, gModuleDrawAlpha * .15f);
+      ofSetLineWidth(.5f);
+      ofLine(x, y + height / 2, x + width, y + height / 2);
+
       ofPopStyle();
    }
 
