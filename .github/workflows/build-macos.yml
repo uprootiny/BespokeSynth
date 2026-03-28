@@ -48,11 +48,9 @@ jobs:
       - name: Patch JUCE for macOS 15 SDK compatibility
         if: matrix.runner == 'macos-15'
         run: |
-          # Suppress deprecated-declarations errors in JUCE (CGWindowListCreateImage removed in macOS 15)
-          # This is safe — the API still works at runtime, Apple just removed the declaration
-          find libs/JUCE -name '*.mm' -o -name '*.cpp' | head -1 > /dev/null
-          export CFLAGS="-Wno-error=deprecated-declarations"
-          export CXXFLAGS="-Wno-error=deprecated-declarations"
+          cd libs/JUCE
+          git apply ../../patches/juce-macos15-cgwindowlist.patch
+          echo "Applied JUCE macOS 15 compatibility patch"
 
       - name: Configure CMake
         run: |
@@ -62,15 +60,10 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DBESPOKE_PORTABLE=True \
             -DBESPOKE_PYTHON_ROOT='/Library/Frameworks/Python.framework/Versions/3.10'
-        env:
-          CFLAGS: "-Wno-error=deprecated-declarations"
-          CXXFLAGS: "-Wno-error=deprecated-declarations"
 
       - name: Build BespokeSynth
         run: |
           cmake --build build --config Release --target BespokeSynth --parallel 4
-        env:
-          OTHER_CFLAGS: "-Wno-deprecated-declarations"
 
       - name: Build .dmg (nightly-package)
         continue-on-error: true
@@ -128,5 +121,5 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            artifacts/BespokeSynth-macOS-app/*.zip
-            artifacts/BespokeSynth-macOS-dmg/*.dmg
+            artifacts/BespokeSynth-*-app/*.zip
+            artifacts/BespokeSynth-*-dmg/*.dmg
