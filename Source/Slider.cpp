@@ -32,6 +32,7 @@
 #include "ModularSynth.h"
 #include "IModulator.h"
 #include "Push2Control.h"
+#include "nanovg/nanovg.h"
 
 FloatSlider::FloatSlider(IFloatSliderListener* owner, const char* label, int x, int y, int w, int h, float* var, float min, float max, int digits /* = -1 */)
 : mVar(var)

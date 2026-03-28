@@ -31,6 +31,7 @@
 #include "ModularSynth.h"
 #include "Profiler.h"
 #include "UIControlMacros.h"
+#include "nanovg/nanovg.h"
 
 SingleOscillator::SingleOscillator()
 : mPolyMgr(this)

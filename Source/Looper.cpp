@@ -34,6 +34,7 @@
 #include "Profiler.h"
 #include "Rewriter.h"
 #include "LooperGranulator.h"
+#include "nanovg/nanovg.h"
 
 float Looper::mBeatwheelPosRight = 0;
 float Looper::mBeatwheelDepthRight = 0;

@@ -33,6 +33,7 @@
 #include "UIControlMacros.h"
 #include "PatchCableSource.h"
 #include "MathUtils.h"
+#include "nanovg/nanovg.h"
 
 NoteStepSequencer::NoteStepSequencer()
 {

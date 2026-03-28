@@ -29,6 +29,7 @@
 #include "ModularSynth.h"
 #include "MidiController.h"
 #include "UIControlMacros.h"
+#include "nanovg/nanovg.h"
 
 namespace
 {
