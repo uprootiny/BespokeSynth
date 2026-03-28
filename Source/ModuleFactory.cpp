@@ -281,6 +281,7 @@
 #include "TapTempo.h"
 #include "ZeroCrossRate.h"
 #include "LatticeSynth.h"
+#include "CohomologySynth.h"
 
 #include <juce_core/juce_core.h>
 
@@ -306,6 +307,7 @@ ModuleFactory::ModuleFactory()
    REGISTER(ScaleDetect, scaledetect, kModuleCategory_Note);
    REGISTER(KarplusStrong, karplusstrong, kModuleCategory_Synth);
    REGISTER(LatticeSynth, latticesynth, kModuleCategory_Synth);
+   REGISTER(CohomologySynth, cohomologysynth, kModuleCategory_Synth);
    REGISTER(WhiteKeys, whitekeys, kModuleCategory_Note);
    //REGISTER(Kicker, kicker, kModuleCategory_Note);
    REGISTER(RingModulator, ringmodulator, kModuleCategory_Audio);

@@ -281,6 +281,8 @@ target_sources(BespokeSynth PRIVATE
     KarplusStrongVoice.h
     LatticeSynth.cpp
     LatticeSynth.h
+    CohomologySynth.cpp
+    CohomologySynth.h
     KeyboardDisplay.cpp
     KeyboardDisplay.h
     Kicker.cpp

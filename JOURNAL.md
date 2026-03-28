@@ -72,3 +72,74 @@ The rendering pipeline is immediate-mode through two layers (OpenFrameworks + Na
 The Karplus-Strong string visualization draws the actual delay buffer — not a visualization of a string, but the string IS the buffer. The LatticeSynth visualization draws the actual node states — not a diagram of a lattice, but the lattice IS the DSP.
 
 This is the design principle: **the visualization should be isomorphic to the computation**. Not a metaphor. Not an analogy. The same mathematical object, rendered.
+
+---
+
+## 2026-03-28: CohomologySynth — from simplicial complexes to sound
+
+### The mathematical ascent
+
+LatticeSynth lives in π₁ — the fundamental group. It counts loops, classifies winding. But higher cohomology yearns to be heard.
+
+CohomologySynth lives in H*(K;R) — the full cohomology ring of a simplicial complex K. The key objects:
+
+**Cochains** are the signal carriers:
+- C⁰ (vertex cochains) = amplitudes at nodes — what you hear
+- C¹ (edge cochains) = flows along connections — how energy moves
+- C² (face cochains) = pressure in enclosed regions — what resonates
+
+**The coboundary operator δ** propagates signal upward:
+- δ⁰: takes a vertex function and computes its gradient on edges
+- δ¹: takes an edge flow and computes its curl around faces
+
+**The Hodge Laplacian Δ = δδ* + δ*δ** is the wave equation on the complex. Its eigenvalues ARE the resonant frequencies. Its eigenvectors ARE the mode shapes. The Hodge theorem says: harmonic forms (ker Δ) are isomorphic to cohomology groups.
+
+### What the Betti numbers sound like
+
+β₀ counts connected components. For a connected complex, β₀ = 1 — one fundamental. For a disconnected complex, each component has its own fundamental.
+
+β₁ counts independent loops. Each loop creates a resonant mode that doesn't exist in a tree. A torus (β₁ = 2) has two independent loop resonances. A bouquet of circles (β₁ = 4) has four.
+
+β₂ counts enclosed cavities. A tetrahedron (β₂ = 1) has one cavity mode — a breathing resonance where the enclosed volume oscillates. This is a formant.
+
+### The DSP pipeline (precise)
+
+1. **Build complex** — specify vertices, edges, faces
+2. **Compute δ⁰** — N₁ × N₀ matrix: δ⁰[e][v] = ±1 for boundary vertices of edge e
+3. **Compute δ¹** — N₂ × N₁ matrix: δ¹[f][e] = ±1 for boundary edges of face f
+4. **Form Laplacian** — Δ₀ = (δ⁰)ᵀ δ⁰ (graph Laplacian, N₀ × N₀)
+5. **Eigendecompose** — Jacobi iteration, O(N³) but N ≤ 12 so instant
+6. **Extract modes** — each nonzero eigenvalue λᵢ gives frequency √λᵢ
+7. **Excite** — project note velocity onto modes via eigenvector at excite vertex
+8. **Synthesize** — sum of damped sinusoids at mode frequencies, O(modes) per sample
+
+**Why this is better than additive synthesis**: the mode frequencies and relative amplitudes aren't arbitrary — they come from the topology. A tetrahedron sounds like a tetrahedron. An octahedron sounds different because it IS different.
+
+### The presets and what they sound like
+
+| Preset | V | E | F | β₀ β₁ β₂ | Character |
+|--------|---|---|---|-----------|-----------|
+| Triangle | 3 | 3 | 1 | 1 0 0 | Simple, three-mode, bell-like |
+| Tetrahedron | 4 | 6 | 4 | 1 0 1 | Hollow, with cavity formant |
+| Octahedron | 6 | 12 | 8 | 1 0 1 | Richer, more modes, sphere-like |
+| Torus | 7 | 14+ | 14 | 1 2 1 | Two loop resonances + cavity |
+| Klein bottle | 6 | ~12 | 7 | 1 1 0 | One loop, no cavity — odd |
+| Bouquet | 5 | 8 | 0 | 1 4 0 | Many loops, no cavity — stringy |
+| Suspension | 6 | 12 | 8 | 1 0 1 | Sphere-like, clear bell |
+
+### The visualization
+
+The simplicial complex is drawn as its 2D projection:
+- **Faces** (2-simplices): filled triangles, opacity pulsing with face pressure
+- **Edges** (1-simplices): lines, brightness scaling with energy flow
+- **Vertices** (0-simplices): glowing dots, displaced radially by amplitude
+  - Positive amplitude: green glow (category color)
+  - Negative amplitude: blue glow (phase-shifted)
+- **Mode spectrum bar**: horizontal strip at bottom showing active mode energies
+- **Betti numbers**: displayed as β = (β₀, β₁, β₂) with simplex counts
+
+### What's rubbery about it
+
+The vertices MOVE. They're displaced radially by their amplitude in the current mode superposition. The faces breathe — their opacity pulses with the average vertex displacement. The edges flex as the energy flows through them. The whole structure wobbles like a rubber object vibrating at its natural frequencies.
+
+This is what "rubbery rings and higher-dimensional shapes, awkwardly sliced glued surgeried and projected" looks like when rendered at 60fps and sonified through eigenmodes.
