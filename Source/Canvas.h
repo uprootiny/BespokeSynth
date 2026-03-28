@@ -162,6 +162,7 @@ private:
    float mLength;
    ICanvasListener* mListener{ nullptr };
    std::vector<CanvasElement*> mElements;
+   std::vector<CanvasElement*> mDeleteQueue;
    CanvasControls* mControls{ nullptr };
    float mCursorPos{ -1 };
    CreateCanvasElementFn mElementCreator;

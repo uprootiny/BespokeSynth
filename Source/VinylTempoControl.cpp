@@ -186,14 +186,13 @@ VinylProcessor::~VinylProcessor()
    timecoder_free_lookup();
 }
 
-//@TODO(Noxy): Warning C6262 Function uses '16448' bytes of stack : exceeds / analyze : stacksize '16384'. Consider moving some data to heap.
 void VinylProcessor::Process(float* left, float* right, int numSamples)
 {
    float* in[2];
    in[0] = left;
    in[1] = right;
    const float kConvert = (float)(1 << 15);
-   signed short data[8196];
+   std::vector<signed short> data(numSamples * 2);
 
    for (int n = 0; n < numSamples; n++)
    {
@@ -201,7 +200,8 @@ void VinylProcessor::Process(float* left, float* right, int numSamples)
          data[n * 2 + ch] = (signed short)(kConvert * (float)in[ch][n]);
    }
 
-   timecoder_submit(&mTimecoder, data, numSamples);
+   timecoder_submit(&mTimecoder, data.data(), numSamples);
 
    mPitch = timecoder_get_pitch(&mTimecoder);
+   mHasSignal = (mPitch != 0.0f);
 }

@@ -55,6 +55,8 @@ Canvas::~Canvas()
 {
    for (int i = 0; i < mElements.size(); ++i)
       delete mElements[i];
+   for (auto* e : mDeleteQueue)
+      delete e;
 }
 
 void Canvas::Render()
@@ -142,7 +144,9 @@ void Canvas::RemoveElement(CanvasElement* element)
    if (mListener)
       mListener->ElementRemoved(element);
    RemoveFromVector(element, mElements, !K(fail));
-   //delete element; TODO(Ryan) figure out how to delete without messing up stuff accessing data from other thread
+   // Deferred delete: move to a pending-delete list so audio thread won't access freed memory.
+   // Elements accumulate here and are cleaned up on the next Canvas::Clear() or destruction.
+   mDeleteQueue.push_back(element);
 }
 
 void Canvas::SelectElement(CanvasElement* element)

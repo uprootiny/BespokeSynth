@@ -227,7 +227,7 @@ PYBIND11_EMBEDDED_MODULE(scriptmodule, m)
          IUIControl* control = module.GetUIControl(path);
          if (control != nullptr)
             return control->GetValue();
-         return 0.0f;
+         throw std::runtime_error("control not found: " + path);
       })
       ///example: pulsewidth = me.get("oscillator~pulsewidth")
       .def("set", [](ScriptModule& module, std::string path, float value)
@@ -235,6 +235,8 @@ PYBIND11_EMBEDDED_MODULE(scriptmodule, m)
          IUIControl* control = module.GetUIControl(path);
          if (control != nullptr)
             module.ScheduleUIControlValue(control, value, 0);
+         else
+            throw std::runtime_error("control not found: " + path);
       })
       ///example: me.set("oscillator~pw", .2)
       .def("get_text", [](ScriptModule& module, std::string path) -> std::string
@@ -984,7 +986,7 @@ PYBIND11_EMBEDDED_MODULE(module, m)
          ScriptModule::sMostRecentLineExecutedModule->ClearContext();
          if (control != nullptr)
             return control->GetValue();
-         return 0.0f;
+         throw std::runtime_error("control not found: " + path);
       })
       .def("adjust", [](IDrawableModule& module, std::string path, float amount)
       {
