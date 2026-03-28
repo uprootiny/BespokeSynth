@@ -48,9 +48,26 @@ jobs:
       - name: Patch JUCE for macOS 15 SDK compatibility
         if: matrix.runner == 'macos-15'
         run: |
-          cd libs/JUCE
-          git apply ../../patches/juce-macos15-cgwindowlist.patch
-          echo "Applied JUCE macOS 15 compatibility patch"
+          FILE="libs/JUCE/modules/juce_gui_basics/native/juce_Windowing_mac.mm"
+          python3 -c "
+          import re
+          with open('$FILE', 'r') as f:
+              src = f.read()
+          # Wrap the CGWindowListCreateImage block in a macOS 15 SDK guard
+          old = '        // CGWindowListCreateImage is replaced by functions in the ScreenCaptureKit framework, but\n        // that framework is only available from macOS 12.3 onwards.\n        // A suitable @available check should be added once the minimum build OS is 12.3 or greater,\n        // so that ScreenCaptureKit can be weak-linked.'
+          new = '        // CGWindowListCreateImage was obsoleted in macOS 15 SDK.\n       #if defined (MAC_OS_VERSION_15_0) && MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_VERSION_15_0\n        return {};\n       #else'
+          assert old in src, 'Could not find CGWindowListCreateImage comment block'
+          src = src.replace(old, new)
+          # Add closing #endif after return result
+          old2 = '        return result;\n    }'
+          new2 = '        return result;\n       #endif\n    }'
+          # Only replace the first occurrence (in createNSWindowSnapshot)
+          src = src.replace(old2, new2, 1)
+          with open('$FILE', 'w') as f:
+              f.write(src)
+          print('JUCE macOS 15 patch applied')
+          "
+          grep -n "return {};" "$FILE"
 
       - name: Configure CMake
         run: |
