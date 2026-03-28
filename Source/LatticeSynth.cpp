@@ -21,13 +21,14 @@
 #include "ModularSynth.h"
 #include "Profiler.h"
 #include "ofxJSONElement.h"
+#include "UIControlMacros.h"
 #include "nanovg/nanovg.h"
 
 LatticeSynth::LatticeSynth()
 : IAudioProcessor(gBufferSize)
 , mWriteBuffer(gBufferSize)
 {
-   mEnvelope.SetADSR(3, 0, 1, 300);
+   mEnvelope.Set(3, 0, 1, 300);
    UpdateDelayLengths();
 }
 
@@ -39,14 +40,16 @@ void LatticeSynth::CreateUIControls()
 {
    IDrawableModule::CreateUIControls();
 
-   mNumNodesSlider = new IntSlider(this, "nodes", 5, 3, 95, 15, &mNumNodes, 3, kMaxLatticeNodes);
-   mExciteNodeSlider = new IntSlider(this, "excite", 5, 21, 95, 15, &mExciteNode, 0, mNumNodes - 1);
-   mDampingSlider = new FloatSlider(this, "damping", 105, 3, 95, 15, &mDamping, 0.9f, 1.0f, 4);
-   mReflectionSlider = new FloatSlider(this, "reflect", 105, 21, 95, 15, &mReflection, 0.0f, 0.95f);
-   mCorruptionDriveSlider = new FloatSlider(this, "drive", 5, 39, 95, 15, &mCorruptionDrive, 0.5f, 8.0f);
-   mVolumeSlider = new FloatSlider(this, "vol", 105, 39, 95, 15, &mVolume, 0.0f, 1.0f);
-   mBoundaryDropdown = new DropdownList(this, "topology", 205, 3, &mBoundary);
-   mCorruptionDropdown = new DropdownList(this, "corrupt", 205, 21, &mCorruptionType);
+   UIBLOCK0();
+   INTSLIDER(mNumNodesSlider, "nodes", &mNumNodes, 3, kMaxLatticeNodes);
+   INTSLIDER(mExciteNodeSlider, "excite", &mExciteNode, 0, mNumNodes - 1);
+   FLOATSLIDER_DIGITS(mDampingSlider, "damping", &mDamping, 0.9f, 1.0f, 4);
+   FLOATSLIDER(mReflectionSlider, "reflect", &mReflection, 0.0f, 0.95f);
+   FLOATSLIDER(mCorruptionDriveSlider, "drive", &mCorruptionDrive, 0.5f, 8.0f);
+   FLOATSLIDER(mVolumeSlider, "vol", &mVolume, 0.0f, 1.0f);
+   DROPDOWN(mBoundaryDropdown, "topology", (int*)&mBoundary, 80);
+   DROPDOWN(mCorruptionDropdown, "corrupt", &mCorruptionType, 80);
+   ENDUIBLOCK0();
 
    mBoundaryDropdown->AddLabel("fixed", kBoundary_Fixed);
    mBoundaryDropdown->AddLabel("free", kBoundary_Free);
@@ -223,7 +226,7 @@ void LatticeSynth::PlayNote(NoteMessage note)
    if (note.velocity > 0)
    {
       mPitch = note.pitch;
-      mFrequency = TheScale->PitchToFreq(mPitch);
+      mFrequency = 440.0f * powf(2.0f, (mPitch - 69.0f) / 12.0f);
       UpdateDelayLengths();
       mEnvelope.Start(gTime, note.velocity / 127.0f);
       mExciteAmount = note.velocity / 127.0f;

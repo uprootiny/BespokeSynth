@@ -21,8 +21,8 @@
 #include "IAudioReceiver.h"
 #include "ModularSynth.h"
 #include "Profiler.h"
-#include "Scale.h"
 #include "ofxJSONElement.h"
+#include "UIControlMacros.h"
 #include "nanovg/nanovg.h"
 #include <cmath>
 #include <algorithm>
@@ -31,7 +31,7 @@ CohomologySynth::CohomologySynth()
 : IAudioProcessor(gBufferSize)
 , mWriteBuffer(gBufferSize)
 {
-   mEnvelope.SetADSR(3, 0, 1, 500);
+   mEnvelope.Set(3, 0, 1, 500);
    BuildComplex(kPreset_Tetrahedron);
 }
 
@@ -43,12 +43,14 @@ void CohomologySynth::CreateUIControls()
 {
    IDrawableModule::CreateUIControls();
 
-   mPresetDropdown = new DropdownList(this, "shape", 5, 3, (int*)&mPreset);
-   mDampingSlider = new FloatSlider(this, "sustain", 120, 3, 90, 15, &mDamping, 0.99f, 0.99999f, 5);
-   mBrightnessSlider = new FloatSlider(this, "bright", 5, 21, 105, 15, &mBrightness, 0.0f, 2.0f);
-   mExciteSpreadSlider = new FloatSlider(this, "spread", 120, 21, 90, 15, &mExciteSpread, 0.0f, 1.0f);
-   mExciteVertexSlider = new IntSlider(this, "vertex", 5, 39, 105, 15, &mExciteVertex, 0, mNumVertices - 1);
-   mVolumeSlider = new FloatSlider(this, "vol", 120, 39, 90, 15, &mVolume, 0.0f, 1.0f);
+   UIBLOCK0();
+   DROPDOWN(mPresetDropdown, "shape", (int*)&mPreset, 100);
+   FLOATSLIDER_DIGITS(mDampingSlider, "sustain", &mDamping, 0.99f, 0.99999f, 5);
+   FLOATSLIDER(mBrightnessSlider, "bright", &mBrightness, 0.0f, 2.0f);
+   FLOATSLIDER(mExciteSpreadSlider, "spread", &mExciteSpread, 0.0f, 1.0f);
+   INTSLIDER(mExciteVertexSlider, "vertex", &mExciteVertex, 0, std::max(0, mNumVertices - 1));
+   FLOATSLIDER(mVolumeSlider, "vol", &mVolume, 0.0f, 1.0f);
+   ENDUIBLOCK0();
 
    mPresetDropdown->AddLabel("triangle", kPreset_Triangle);
    mPresetDropdown->AddLabel("tetra", kPreset_Tetrahedron);
@@ -544,7 +546,7 @@ void CohomologySynth::PlayNote(NoteMessage note)
    if (note.velocity > 0)
    {
       mPitch = note.pitch;
-      mFrequency = TheScale->PitchToFreq(mPitch);
+      mFrequency = 440.0f * powf(2.0f, (mPitch - 69.0f) / 12.0f);
       mBaseFreq = mFrequency;
       mEnvelope.Start(gTime, note.velocity / 127.0f);
 
