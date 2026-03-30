@@ -27,6 +27,7 @@
 #include "OpenFrameworksPort.h"
 #include "SynthGlobals.h"
 #include "IAudioReceiver.h"
+#include "nanovg/nanovg.h"
 #include "ModularSynth.h"
 #include "Profiler.h"
 

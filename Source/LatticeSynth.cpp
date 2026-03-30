@@ -280,8 +280,8 @@ void LatticeSynth::Process(double time)
       if (mExciteAmount > 0)
       {
          float excite = mExciteAmount * mEnvelopeValue;
-         // Noise burst excitation (pluck-like) using deterministic PRNG
-         excite *= (gRandom() / (float)gRandom.max() * 2.0f - 1.0f);
+         // Noise burst excitation (pluck-like)
+         excite *= RandomSample();
          ExciteNode(mExciteNode, excite);
          mExciteAmount *= 0.99f; // decay excitation over ~100 samples
          if (mExciteAmount < 0.001f)
