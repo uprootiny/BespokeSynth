@@ -206,22 +206,8 @@ float LatticeSynth::ReadDelay(float* buffer, int writePos, int length, float sam
    return y;
 }
 
-void LatticeSynth::PropagateForward(int from, int to)
-{
-   // Write current forward wave into delay line, read delayed into next node
-   auto& src = mNodes[from];
-   src.delayBuffer[src.writePos] = src.forward;
-   float delayed = ReadDelay(src.delayBuffer, src.writePos, src.delayLength, src.delayLength - 1);
-   mNodes[to].forward = delayed;
-}
-
-void LatticeSynth::PropagateBackward(int from, int to)
-{
-   auto& src = mNodes[from];
-   src.delayBufferBack[src.writePos] = src.backward;
-   float delayed = ReadDelay(src.delayBufferBack, src.writePos, src.delayLength, src.delayLength - 1);
-   mNodes[to].backward = delayed;
-}
+// PropagateForward/PropagateBackward removed — propagation is now inlined
+// in Process() with snapshot ordering to avoid read-after-write hazard.
 
 void LatticeSynth::ApplyBoundaryConditions()
 {

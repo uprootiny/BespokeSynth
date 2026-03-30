@@ -150,8 +150,7 @@ private:
    void ExciteNode(int node, float amount);
    float ApplyCorruption(float sample, LatticeCorruption type, float drive);
    void ScatterAtNode(int i);
-   void PropagateForward(int from, int to);
-   void PropagateBackward(int from, int to);
+   // Propagation inlined in Process() with snapshot ordering
    void ApplyBoundaryConditions();
    void UpdateDelayLengths();
    float ReadDelay(float* buffer, int writePos, int length, float samplesAgo, float& allpassState);
