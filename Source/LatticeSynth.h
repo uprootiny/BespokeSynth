@@ -105,6 +105,10 @@ struct LatticeNode
 
    // DC blocker state (1-pole highpass at ~20Hz)
    float dcState{ 0 };
+
+   // Allpass interpolation state (per-edge, for fractional delay)
+   float allpassStateFwd{ 0 };
+   float allpassStateBack{ 0 };
 };
 
 class LatticeSynth : public IAudioProcessor, public INoteReceiver, public IDrawableModule,
@@ -150,7 +154,7 @@ private:
    void PropagateBackward(int from, int to);
    void ApplyBoundaryConditions();
    void UpdateDelayLengths();
-   float ReadDelay(float* buffer, int writePos, int length, float samplesAgo);
+   float ReadDelay(float* buffer, int writePos, int length, float samplesAgo, float& allpassState);
 
    // Lattice state
    LatticeNode mNodes[kMaxLatticeNodes];

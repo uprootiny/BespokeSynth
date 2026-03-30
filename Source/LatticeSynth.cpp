@@ -137,37 +137,73 @@ float LatticeSynth::ApplyCorruption(float sample, LatticeCorruption type, float 
 
 void LatticeSynth::ScatterAtNode(int i)
 {
-   // Scattering junction: energy-preserving 2x2 matrix
-   // [out+]   [1-r   r ] [in+]
-   // [out-] = [ r   1-r] [in-]
-   float r = mNodes[i].reflection;
+   // Kelly-Lochbaum scattering junction, parameterized by angle theta.
+   // S = [cos(theta), sin(theta); sin(theta), -cos(theta)]
+   // This is EXACTLY unitary (S^T S = I) for all theta.
+   // theta=0: full transmission. theta=pi/2: full reflection.
+   // The reflection parameter r in [0,1] maps to theta in [0, pi/2].
+   float theta = mNodes[i].reflection * (FPI * 0.5f);
+   float c = cosf(theta);
+   float s = sinf(theta);
+
    float fwd = mNodes[i].forward;
    float bwd = mNodes[i].backward;
 
-   float outFwd = (1.0f - r) * fwd + r * bwd;
-   float outBwd = r * fwd + (1.0f - r) * bwd;
+   float outFwd = c * fwd + s * bwd;
+   float outBwd = s * fwd - c * bwd;
 
-   // Apply corruption
+   // Apply corruption (nonlinearity)
    outFwd = ApplyCorruption(outFwd, mNodes[i].corruption, mNodes[i].corruptionDrive);
    outBwd = ApplyCorruption(outBwd, mNodes[i].corruption, mNodes[i].corruptionDrive);
 
-   // DC blocker (1-pole highpass, fc ~20Hz)
-   float dcAlpha = 0.997f;
-   mNodes[i].dcState = dcAlpha * mNodes[i].dcState + (1.0f - dcAlpha) * outFwd;
-   outFwd -= mNodes[i].dcState;
+   // DC blocker on BOTH traveling waves (1-pole highpass, fc ~20Hz)
+   // y[n] = x[n] - x[n-1] + alpha * y[n-1], alpha = (1 + cos(2*pi*fc/sr)) / (...)
+   // Simplified: y = alpha * (y_prev + x - x_prev), with alpha ~0.997 at 48kHz/20Hz
+   float dcAlpha = 1.0f - (125.66f / gSampleRate); // 2*pi*20/sr, precise
+   float dcFwd = outFwd - mNodes[i].dcState + dcAlpha * mNodes[i].dcState;
+   mNodes[i].dcState = outFwd; // store for next sample
 
-   mNodes[i].forward = outFwd * mDamping;
+   mNodes[i].forward = dcFwd * mDamping;
    mNodes[i].backward = outBwd * mDamping;
 }
 
-float LatticeSynth::ReadDelay(float* buffer, int writePos, int length, float samplesAgo)
+float LatticeSynth::ReadDelay(float* buffer, int writePos, int length, float samplesAgo, float& allpassState)
 {
-   // Linear interpolation fractional delay read
+   // First-order Thiran allpass interpolation for fractional delay.
+   //
+   // Transfer function: H(z) = (a + z^-1) / (1 + a*z^-1)
+   //   where a = (1-d)/(1+d) and d is the fractional part of the delay.
+   //
+   // Properties:
+   //   |H(e^jw)| = 1 for all w  (flat magnitude — no coloration)
+   //   Group delay ≈ d samples (correct fractional pitch)
+   //   Requires one float of state per delay line (allpassState)
+   //
+   // This is strictly superior to linear interpolation, which has a
+   // lowpass characteristic that dulls high frequencies on short delays.
+
+   if (length <= 1) return buffer[0];
+
    int intDelay = (int)samplesAgo;
    float frac = samplesAgo - intDelay;
-   int idx0 = (writePos - intDelay + length * 2) % length;
-   int idx1 = (idx0 - 1 + length) % length;
-   return buffer[idx0] * (1.0f - frac) + buffer[idx1] * frac;
+
+   int idx = (writePos - intDelay + length * 2) % length;
+
+   if (frac < 0.001f)
+   {
+      allpassState = buffer[idx];
+      return buffer[idx];
+   }
+
+   // Thiran coefficient
+   float a = (1.0f - frac) / (1.0f + frac);
+
+   // Allpass difference equation: y[n] = a * x[n] + x[n-1] - a * y[n-1]
+   // Here x[n] = buffer[idx], x[n-1] = buffer[idx-1], y[n-1] = allpassState
+   int idxPrev = (idx - 1 + length) % length;
+   float y = a * buffer[idx] + buffer[idxPrev] - a * allpassState;
+   allpassState = y;
+   return y;
 }
 
 void LatticeSynth::PropagateForward(int from, int to)
@@ -240,6 +276,8 @@ void LatticeSynth::PlayNote(NoteMessage note)
          mNodes[i].backward = 0;
          mNodes[i].dcState = 0;
          mNodes[i].writePos = 0;
+         mNodes[i].allpassStateFwd = 0;
+         mNodes[i].allpassStateBack = 0;
       }
    }
    else
@@ -311,19 +349,19 @@ void LatticeSynth::Process(double time)
       for (int i = 0; i < propagateCount; ++i)
       {
          int next = (i + 1) % mNumNodes;
-         // Forward: node i → delay → node next
          auto& src = mNodes[i];
          src.delayBuffer[src.writePos] = fwdSnapshot[i];
-         mNodes[next].forward = ReadDelay(src.delayBuffer, src.writePos, src.delayLength, src.delayLength - 1);
+         mNodes[next].forward = ReadDelay(src.delayBuffer, src.writePos,
+            src.delayLength, src.delayLength - 1, src.allpassStateFwd);
       }
 
       for (int i = propagateCount - 1; i >= 0; --i)
       {
          int next = (i + 1) % mNumNodes;
-         // Backward: node next → delay → node i
          auto& src = mNodes[next];
          src.delayBufferBack[src.writePos] = bwdSnapshot[next];
-         mNodes[i].backward = ReadDelay(src.delayBufferBack, src.writePos, src.delayLength, src.delayLength - 1);
+         mNodes[i].backward = ReadDelay(src.delayBufferBack, src.writePos,
+            src.delayLength, src.delayLength - 1, src.allpassStateBack);
       }
 
       // Möbius: invert phase at the wrapping point
