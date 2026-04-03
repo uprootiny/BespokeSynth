@@ -283,6 +283,8 @@ target_sources(BespokeSynth PRIVATE
     LatticeSynth.h
     CohomologySynth.cpp
     CohomologySynth.h
+    TopologySynth.cpp
+    TopologySynth.h
     KeyboardDisplay.cpp
     KeyboardDisplay.h
     Kicker.cpp
