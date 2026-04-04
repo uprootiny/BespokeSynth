@@ -243,46 +243,56 @@ void MembraneSynth::DrawModule()
       nvgFill(gNanoVG);
    }
 
-   float cellSize = vizSize / mGridSize;
-
-   // Draw each cell as a colored rect
-   for (int y = 0; y < mGridSize; ++y)
+   // Smooth interpolated membrane heatmap
+   // Instead of per-cell circles, scan pixel rows and bilinearly interpolate
+   // between grid points for a continuous surface appearance.
    {
-      for (int x = 0; x < mGridSize; ++x)
+      float pixelStep = 3.0f / gDrawScale; // render every ~3 screen pixels
+      if (pixelStep < 1) pixelStep = 1;
+
+      for (float py = 0; py < vizSize; py += pixelStep)
       {
-         if (!IsInside(x, y)) continue;
-
-         float val = mPviz[y][x];
-         float mag = ofClamp(fabsf(val) * 15, 0, 1);
-
-         if (mag < 0.005f) continue; // skip silent cells
-
-         float cx = vizX + (x + 0.5f) * cellSize;
-         float cy = vizY + (y + 0.5f) * cellSize;
-
-         // Color: positive = warm (orange/red), negative = cool (blue/cyan)
-         int r, g, b;
-         if (val > 0)
+         for (float px = 0; px < vizSize; px += pixelStep)
          {
-            r = (int)(255 * mag);
-            g = (int)(120 * mag);
-            b = (int)(40 * mag);
-         }
-         else
-         {
-            r = (int)(40 * mag);
-            g = (int)(120 * mag);
-            b = (int)(255 * mag);
-         }
+            // Map pixel to grid coords
+            float gx = px / vizSize * (mGridSize - 1);
+            float gy = py / vizSize * (mGridSize - 1);
 
-         NVGpaint glow = nvgRadialGradient(gNanoVG, cx, cy,
-            cellSize * 0.1f, cellSize * 0.7f,
-            nvgRGBA(r, g, b, (int)(mag * gModuleDrawAlpha * .7f)),
-            nvgRGBA(r, g, b, 0));
-         nvgBeginPath(gNanoVG);
-         nvgCircle(gNanoVG, cx, cy, cellSize * 0.8f);
-         nvgFillPaint(gNanoVG, glow);
-         nvgFill(gNanoVG);
+            int x0 = (int)gx, y0 = (int)gy;
+            int x1 = std::min(x0 + 1, mGridSize - 1);
+            int y1 = std::min(y0 + 1, mGridSize - 1);
+            float fx = gx - x0, fy = gy - y0;
+
+            // Check circle mask at this pixel position
+            if (mShape == kShape_Circle)
+            {
+               float cx = (mGridSize - 1) * 0.5f;
+               float cy = (mGridSize - 1) * 0.5f;
+               float dx = gx - cx, dy = gy - cy;
+               if (dx * dx + dy * dy > cx * cx) continue;
+            }
+
+            // Bilinear interpolation
+            float val = mPviz[y0][x0] * (1 - fx) * (1 - fy)
+                      + mPviz[y0][x1] * fx * (1 - fy)
+                      + mPviz[y1][x0] * (1 - fx) * fy
+                      + mPviz[y1][x1] * fx * fy;
+
+            float mag = ofClamp(fabsf(val) * 12, 0, 1);
+            if (mag < 0.01f) continue;
+
+            int r, g, b;
+            if (val > 0) { r = (int)(255 * mag); g = (int)(140 * mag); b = (int)(50 * mag); }
+            else         { r = (int)(50 * mag);  g = (int)(140 * mag); b = (int)(255 * mag); }
+
+            float sx = vizX + px;
+            float sy = vizY + py;
+
+            nvgBeginPath(gNanoVG);
+            nvgRect(gNanoVG, sx, sy, pixelStep, pixelStep);
+            nvgFillColor(gNanoVG, nvgRGBA(r, g, b, (int)(mag * gModuleDrawAlpha * .65f)));
+            nvgFill(gNanoVG);
+         }
       }
    }
 

@@ -780,15 +780,82 @@ void CohomologySynth::DrawModule()
       ofPopStyle();
    }
 
-   // Betti numbers and topology info
+   // Betti numbers — prominent display with meaning-coded colors
+   // β₀ = warm (fundamentals), β₁ = cool (loops), β₂ = magenta (cavities)
    {
       ofPushStyle();
-      ofSetColor(255, 255, 255, gModuleDrawAlpha * .3f);
-      char info[128];
-      snprintf(info, sizeof(info), "beta = (%d, %d, %d)  V%d E%d F%d  modes:%d",
-               mBetti[0], mBetti[1], mBetti[2],
+
+      // Recessed status strip
+      {
+         NVGpaint strip = nvgLinearGradient(gNanoVG, vizX, vizY + vizH - 32, vizX, vizY + vizH,
+            nvgRGBA(8, 8, 12, (int)(gModuleDrawAlpha * .5f)),
+            nvgRGBA(4, 4, 8, (int)(gModuleDrawAlpha * .7f)));
+         nvgBeginPath(gNanoVG);
+         nvgRoundedRect(gNanoVG, vizX + 2, vizY + vizH - 32, vizW - 4, 30, gCornerRoundness * 2);
+         nvgFillPaint(gNanoVG, strip);
+         nvgFill(gNanoVG);
+      }
+
+      float betaX = vizX + 10;
+      float betaY = vizY + vizH - 12;
+
+      // β₀ — warm orange (connected components / fundamentals)
+      {
+         char b0[16]; snprintf(b0, sizeof(b0), "%d", mBetti[0]);
+         ofSetColor(255, 180, 80, gModuleDrawAlpha * .8f);
+         DrawTextNormal("b0", betaX, betaY - 10, 7);
+         DrawTextNormal(b0, betaX + 2, betaY + 2, 14);
+         if (mBetti[0] > 0)
+         {
+            NVGpaint glow = nvgRadialGradient(gNanoVG, betaX + 5, betaY - 2, 2, 12,
+               nvgRGBA(255, 180, 80, (int)(gModuleDrawAlpha * .15f)),
+               nvgRGBA(255, 180, 80, 0));
+            nvgBeginPath(gNanoVG); nvgCircle(gNanoVG, betaX + 5, betaY - 2, 14);
+            nvgFillPaint(gNanoVG, glow); nvgFill(gNanoVG);
+         }
+      }
+
+      // β₁ — cool cyan (independent loops)
+      betaX += 45;
+      {
+         char b1[16]; snprintf(b1, sizeof(b1), "%d", mBetti[1]);
+         ofSetColor(80, 200, 255, gModuleDrawAlpha * .8f);
+         DrawTextNormal("b1", betaX, betaY - 10, 7);
+         DrawTextNormal(b1, betaX + 2, betaY + 2, 14);
+         if (mBetti[1] > 0)
+         {
+            NVGpaint glow = nvgRadialGradient(gNanoVG, betaX + 5, betaY - 2, 2, 12,
+               nvgRGBA(80, 200, 255, (int)(gModuleDrawAlpha * .15f)),
+               nvgRGBA(80, 200, 255, 0));
+            nvgBeginPath(gNanoVG); nvgCircle(gNanoVG, betaX + 5, betaY - 2, 14);
+            nvgFillPaint(gNanoVG, glow); nvgFill(gNanoVG);
+         }
+      }
+
+      // β₂ — magenta (enclosed cavities / formants)
+      betaX += 45;
+      {
+         char b2[16]; snprintf(b2, sizeof(b2), "%d", mBetti[2]);
+         ofSetColor(220, 100, 220, gModuleDrawAlpha * .8f);
+         DrawTextNormal("b2", betaX, betaY - 10, 7);
+         DrawTextNormal(b2, betaX + 2, betaY + 2, 14);
+         if (mBetti[2] > 0)
+         {
+            NVGpaint glow = nvgRadialGradient(gNanoVG, betaX + 5, betaY - 2, 2, 12,
+               nvgRGBA(220, 100, 220, (int)(gModuleDrawAlpha * .15f)),
+               nvgRGBA(220, 100, 220, 0));
+            nvgBeginPath(gNanoVG); nvgCircle(gNanoVG, betaX + 5, betaY - 2, 14);
+            nvgFillPaint(gNanoVG, glow); nvgFill(gNanoVG);
+         }
+      }
+
+      // Simplex counts and mode count (smaller, right-aligned)
+      betaX += 55;
+      ofSetColor(255, 255, 255, gModuleDrawAlpha * .2f);
+      char stats[64];
+      snprintf(stats, sizeof(stats), "V%d E%d F%d  %d modes",
                mNumVertices, mNumEdges, mNumFaces, mActiveModes);
-      DrawTextNormal(info, vizX + 5, vizY + vizH - 5, 9);
+      DrawTextNormal(stats, betaX, betaY - 2, 8);
 
       // Mode spectrum bar
       float barX = vizX + 5;
