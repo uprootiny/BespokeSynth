@@ -288,6 +288,7 @@
 #include "MembraneSynth.h"
 #include "TopologyDelay.h"
 #include "CohomologyVerb.h"
+#include "BowedString.h"
 
 #include <juce_core/juce_core.h>
 
@@ -320,6 +321,7 @@ ModuleFactory::ModuleFactory()
    REGISTER(MembraneSynth, membranesynth, kModuleCategory_Synth);
    REGISTER(TopologyDelay, topologydelay, kModuleCategory_Audio);
    REGISTER(CohomologyVerb, cohomologyverb, kModuleCategory_Audio);
+   REGISTER(BowedString, bowedstring, kModuleCategory_Synth);
    REGISTER(WhiteKeys, whitekeys, kModuleCategory_Note);
    //REGISTER(Kicker, kicker, kModuleCategory_Note);
    REGISTER(RingModulator, ringmodulator, kModuleCategory_Audio);

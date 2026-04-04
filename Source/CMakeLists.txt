@@ -295,6 +295,8 @@ target_sources(BespokeSynth PRIVATE
     TopologyDelay.h
     CohomologyVerb.cpp
     CohomologyVerb.h
+    BowedString.cpp
+    BowedString.h
     KeyboardDisplay.cpp
     KeyboardDisplay.h
     Kicker.cpp
