@@ -1,0 +1,131 @@
+{
+   "modules" : [
+      {
+         "name" : "transport",
+         "position" : [ 14.0, 30.0 ],
+         "type" : "transport"
+      },
+      {
+         "name" : "scale",
+         "position" : [ 158.0, 30.0 ],
+         "type" : "scale"
+      },
+      {
+         "comment" : "=== TANPURA DRONE: 4 strings (Pa-Sa-Sa-Sa low) via LatticeSynth ===",
+         "comment2" : "LatticeSynth in ring mode gives sustaining harmonic drone",
+         "name" : "tanpura 1 (Pa)",
+         "position" : [ 50.0, 150.0 ],
+         "target" : "drone verb",
+         "type" : "latticesynth"
+      },
+      {
+         "name" : "tanpura 2 (Sa)",
+         "position" : [ 50.0, 400.0 ],
+         "target" : "drone verb",
+         "type" : "latticesynth"
+      },
+      {
+         "name" : "tanpura 3 (Sa)",
+         "position" : [ 330.0, 150.0 ],
+         "target" : "drone verb",
+         "type" : "latticesynth"
+      },
+      {
+         "name" : "tanpura 4 (Sa low)",
+         "position" : [ 330.0, 400.0 ],
+         "target" : "drone verb",
+         "type" : "latticesynth"
+      },
+      {
+         "comment" : "Slow pulse triggers each tanpura string in sequence",
+         "name" : "drone pulse",
+         "position" : [ 50.0, 650.0 ],
+         "target" : "tanpura 1 (Pa)",
+         "type" : "pulser"
+      },
+      {
+         "comment" : "=== DRONE REVERB: cave (torus topology, β₁=2) for deep resonance ===",
+         "name" : "drone verb",
+         "position" : [ 630.0, 300.0 ],
+         "target" : "main mix",
+         "type" : "cohomologyverb"
+      },
+      {
+         "comment" : "=== SARGAM VOICE: TopologySynth for melodic improvisation ===",
+         "comment2" : "Wire a keyboard or notesequencer here for Sa Re Ga Ma Pa Dha Ni",
+         "name" : "sargam voice",
+         "position" : [ 630.0, 50.0 ],
+         "target" : "melody delay",
+         "type" : "topologysynth"
+      },
+      {
+         "comment" : "=== MELODY SEQUENCER: pentatonic sargam pattern ===",
+         "name" : "sargam seq",
+         "position" : [ 630.0, 500.0 ],
+         "target" : "sargam voice",
+         "type" : "notesequencer"
+      },
+      {
+         "comment" : "TopologyDelay with high diffusion for melodic shimmer",
+         "name" : "melody delay",
+         "position" : [ 950.0, 50.0 ],
+         "target" : "melody verb",
+         "type" : "topologydelay"
+      },
+      {
+         "comment" : "Hall verb for the melody (tetrahedron, β₂=1 cavity resonance)",
+         "name" : "melody verb",
+         "position" : [ 950.0, 280.0 ],
+         "target" : "main mix",
+         "type" : "cohomologyverb"
+      },
+      {
+         "comment" : "=== TABLA: MembraneSynth for rhythmic accompaniment ===",
+         "name" : "tabla",
+         "position" : [ 950.0, 520.0 ],
+         "target" : "tabla filter",
+         "type" : "membranesynth"
+      },
+      {
+         "comment" : "TopologyFilter adds resonant color to the tabla",
+         "name" : "tabla filter",
+         "position" : [ 1250.0, 520.0 ],
+         "target" : "main mix",
+         "type" : "topologyfilter"
+      },
+      {
+         "comment" : "Tabla pattern: 16-step tin-tal inspired",
+         "name" : "taal",
+         "position" : [ 1250.0, 750.0 ],
+         "target" : "tabla",
+         "type" : "drumsequencer"
+      },
+      {
+         "comment" : "=== OUTPUT ===",
+         "name" : "main mix",
+         "position" : [ 1500.0, 350.0 ],
+         "target" : "splitter",
+         "type" : "gain"
+      },
+      {
+         "name" : "splitter",
+         "position" : [ 1500.0, 430.0 ],
+         "target" : "output 1",
+         "target2" : "output 2",
+         "type" : "splitter"
+      },
+      {
+         "channels" : 0,
+         "name" : "output 1",
+         "position" : [ 1480.0, 510.0 ],
+         "type" : "output"
+      },
+      {
+         "channels" : 1,
+         "name" : "output 2",
+         "position" : [ 1580.0, 510.0 ],
+         "type" : "output"
+      }
+   ],
+   "zoomlocations" : []
+}
