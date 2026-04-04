@@ -115,7 +115,7 @@ void TopologyDelay::Process(double time)
       mDelayWritePos = (mDelayWritePos + 1) % kDelayMaxSamples;
 
       // Output
-      input[s] = dry * (1.0f - mWetDry) + wet * mWetDry;
+      input[s] = ofClamp(dry * (1.0f - mWetDry) + wet * mWetDry, -4.0f, 4.0f);
    }
 
    // Viz

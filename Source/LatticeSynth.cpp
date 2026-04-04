@@ -160,7 +160,7 @@ void LatticeSynth::ScatterAtNode(int i)
    // y[n] = x[n] - x[n-1] + R * y[n-1], where R = exp(-2*pi*fc/sr)
    // This gives -3dB at fc=20Hz and passes everything above.
    {
-      static float sR = expf(-FTWO_PI * 20.0f / gSampleRate);
+      float sR = expf(-FTWO_PI * 20.0f / gSampleRate); // recompute each call (sr may change)
       float xn = outFwd;
       float yn = xn - mNodes[i].dcState + sR * mNodes[i].dcPrevY;
       mNodes[i].dcState = xn;   // x[n-1]
@@ -378,7 +378,7 @@ void LatticeSynth::Process(double time)
       output /= mNumNodes;
       output *= mVolume * mEnvelopeValue;
 
-      out[s] = output;
+      out[s] = ofClamp(output, -2.0f, 2.0f);
 
       // Store visualization state (downsample to once per buffer)
       if (s == bufferSize / 2)

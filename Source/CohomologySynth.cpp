@@ -609,7 +609,7 @@ void CohomologySynth::Process(double time)
          mode.amplitude *= mode.damping;
       }
 
-      out[s] = sample * mVolume * mEnvelopeValue;
+      out[s] = ofClamp(sample * mVolume * mEnvelopeValue, -2.0f, 2.0f);
       time += gInvSampleRateMs;
    }
 

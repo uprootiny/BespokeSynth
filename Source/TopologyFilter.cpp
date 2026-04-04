@@ -203,7 +203,7 @@ void TopologyFilter::Process(double time)
          wet = mNodes[mPickupNode].fwd + mNodes[mPickupNode].bwd;
 
       // Mix
-      input[s] = dry * (1.0f - mWetDry) + wet * mWetDry;
+      input[s] = ofClamp(dry * (1.0f - mWetDry) + wet * mWetDry, -4.0f, 4.0f);
    }
 
    // Viz (once per buffer)

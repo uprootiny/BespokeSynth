@@ -113,10 +113,12 @@ void CoupledOscillators::Process(double time)
    float* out = mWriteBuffer.GetChannel(0);
 
    // Precompute spring constants: omega_i^2 = (2*pi*f*ratio)^2 / sr^2
+   // Clamp at Nyquist/2 to prevent Verlet instability
    float omega2[kMaxOscCount];
+   float maxFreq = gSampleRate * 0.25f; // Verlet stable up to sr/4
    for (int i = 0; i < mNumMasses; ++i)
    {
-      float f = mFrequency * mMasses[i].freqRatio;
+      float f = std::min(mFrequency * mMasses[i].freqRatio, maxFreq);
       float w = FTWO_PI * f / gSampleRate;
       omega2[i] = w * w;
    }
@@ -150,7 +152,7 @@ void CoupledOscillators::Process(double time)
          sample += mMasses[i].pos;
       sample /= mNumMasses;
 
-      out[s] = sample * mVolume * mEnvValue;
+      out[s] = ofClamp(sample * mVolume * mEnvValue, -2.0f, 2.0f);
       time += gInvSampleRateMs;
    }
 

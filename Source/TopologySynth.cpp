@@ -234,10 +234,9 @@ void TopologySynth::Process(double time)
             case kExciter_Impulse: excite = mExciteAmount; mExciteAmount = 0; break;
             case kExciter_Saw:
             {
-               static float sawPhase = 0;
-               sawPhase += mFrequency / gSampleRate;
-               if (sawPhase > 1) sawPhase -= 1;
-               excite = mExciteAmount * (sawPhase * 2.0f - 1.0f);
+               // Phase is per-instance (member mExciteAmount doubles as phase when negative won't happen)
+               float phase = fmodf((float)(gTime * mFrequency / gSampleRate * 0.001f), 1.0f);
+               excite = mExciteAmount * (phase * 2.0f - 1.0f);
                break;
             }
          }
@@ -337,7 +336,7 @@ void TopologySynth::Process(double time)
       float finalOut = latticeOut * 0.6f + modalOut * 0.4f;
 
       // --- Stage 5: Amp ---
-      out[s] = finalOut * mVolume * mEnvValue;
+      out[s] = ofClamp(finalOut * mVolume * mEnvValue, -2.0f, 2.0f);
 
       // Viz
       mScopeBuffer.Write(out[s], 0);

@@ -182,8 +182,8 @@ void MembraneSynth::Process(double time)
       memcpy(mPprev, mP, sizeof(mP));
       memcpy(mP, pNext, sizeof(pNext));
 
-      // Output: read at pickup position
-      float sample = mP[py][px];
+      // Output: read at pickup position, hard-limit to prevent pops
+      float sample = ofClamp(mP[py][px], -2.0f, 2.0f);
       out[s] = sample * mVolume * mEnvValue;
 
       time += gInvSampleRateMs;
