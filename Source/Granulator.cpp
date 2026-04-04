@@ -28,6 +28,7 @@
 #include "Profiler.h"
 #include "ChannelBuffer.h"
 #include "juce_dsp/maths/juce_FastMathApproximations.h"
+#include "nanovg/nanovg.h"
 
 Granulator::Granulator()
 {
@@ -153,19 +154,43 @@ void Granulator::DrawWindow(float x, float y, float w, float h)
 {
    ofPushStyle();
 
-   ofSetColor(100, 100, 100, .8f * gModuleDrawAlpha);
-   ofSetLineWidth(.5f);
-   ofFill();
-   ofRect(x, y, w, h, 0);
+   // Inset background
+   {
+      NVGpaint bg = nvgLinearGradient(gNanoVG, x, y, x, y + h,
+         nvgRGBA(15, 12, 10, (int)(gModuleDrawAlpha * .8f)),
+         nvgRGBA(6, 5, 4, (int)(gModuleDrawAlpha * .8f)));
+      nvgBeginPath(gNanoVG);
+      nvgRoundedRect(gNanoVG, x, y, w, h, gCornerRoundness * 2);
+      nvgFillPaint(gNanoVG, bg);
+      nvgFill(gNanoVG);
+   }
 
-   ofSetColor(245, 58, 0, gModuleDrawAlpha);
-   ofSetLineWidth(1);
+   // Filled window shape with gradient
+   {
+      nvgBeginPath(gNanoVG);
+      nvgMoveTo(gNanoVG, x, y + h);
+      for (int i = 0; i < (int)w; i += 2)
+      {
+         float val = GetWindow(mWindowType, mWindowShape, mGrainLengthMs, (float)i / w);
+         nvgLineTo(gNanoVG, x + i, y + h - val * h);
+      }
+      nvgLineTo(gNanoVG, x + w, y + h);
+      nvgClosePath(gNanoVG);
+      NVGpaint fill = nvgLinearGradient(gNanoVG, x, y, x, y + h,
+         nvgRGBA(255, 180, 80, (int)(gModuleDrawAlpha * .3f)),
+         nvgRGBA(255, 100, 40, (int)(gModuleDrawAlpha * .08f)));
+      nvgFillPaint(gNanoVG, fill);
+      nvgFill(gNanoVG);
+   }
+
+   // Window stroke
+   ofSetColor(255, 160, 60, gModuleDrawAlpha);
+   ofSetLineWidth(1.5f);
    ofNoFill();
    ofBeginShape();
-   const int stepSize = 3;
-   for (int i = 0; i < (int)w; i += stepSize)
+   for (int i = 0; i < (int)w; i += 2)
    {
-      ofVertex(x + i, y + h - GetWindow(mWindowType, mWindowShape, mGrainLengthMs, i / w) * h);
+      ofVertex(x + i, y + h - GetWindow(mWindowType, mWindowShape, mGrainLengthMs, (float)i / w) * h);
    }
    ofEndShape();
 
@@ -271,11 +296,53 @@ void Grain::DrawGrain(int idx, float x, float y, float w, float h, int bufferSta
    float a = fmod((mPos - bufferStart), bufferLength) / viewLength;
    if (a < 0 || a > 1)
       return;
-   ofPushStyle();
-   ofFill();
+
    double phase = (std::clamp(gTime, mStartTime, mEndTime) - mStartTime) * mStartToEndInv;
    float alpha = Granulator::GetWindow(granulator->mWindowType, granulator->mWindowShape, granulator->mGrainLengthMs, phase) * gain;
-   ofSetColor(255, 0, 0, alpha * 255);
-   ofCircle(x + a * w, y + mDrawPos * h, MAX(3, h / MAX_GRAINS / 2));
+   if (alpha < 0.01f)
+      return;
+
+   float gx = x + a * w;
+   float gy = y + mDrawPos * h;
+
+   // Grain size: proportional to length, minimum visible
+   float grainRadius = MAX(4, granulator->mGrainLengthMs * 0.08f);
+   grainRadius = MIN(grainRadius, h * 0.15f);
+
+   // Color: speed-coded. Normal speed = warm amber. Fast = bright white. Slow = deep blue.
+   float speedNorm = ofClamp(fabsf(mSpeedMult), 0, 3) / 3.0f;
+   int cr, cg, cb;
+   if (mSpeedMult >= 0)
+   {
+      cr = (int)(255 * (0.8f + 0.2f * speedNorm));
+      cg = (int)(180 * (1.0f - speedNorm * 0.5f));
+      cb = (int)(80 * (1.0f - speedNorm));
+   }
+   else
+   {
+      // Reverse grains: cool blue
+      cr = (int)(80);
+      cg = (int)(150 * (1.0f - speedNorm * 0.3f));
+      cb = (int)(255);
+   }
+
+   // Radial glow
+   {
+      extern NVGcontext* gNanoVG;
+      NVGpaint glow = nvgRadialGradient(gNanoVG, gx, gy,
+         grainRadius * 0.3f, grainRadius * 1.2f,
+         nvgRGBA(cr, cg, cb, (int)(alpha * 180)),
+         nvgRGBA(cr, cg, cb, 0));
+      nvgBeginPath(gNanoVG);
+      nvgCircle(gNanoVG, gx, gy, grainRadius * 1.5f);
+      nvgFillPaint(gNanoVG, glow);
+      nvgFill(gNanoVG);
+   }
+
+   // Core dot
+   ofPushStyle();
+   ofFill();
+   ofSetColor(cr, cg, cb, (int)(alpha * 255));
+   ofCircle(gx, gy, grainRadius * 0.4f);
    ofPopStyle();
 }
