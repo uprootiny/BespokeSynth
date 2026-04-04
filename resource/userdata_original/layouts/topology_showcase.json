@@ -1,0 +1,125 @@
+{
+   "modules" : [
+      {
+         "name" : "transport",
+         "position" : [ 14.0, 30.0 ],
+         "type" : "transport"
+      },
+      {
+         "name" : "scale",
+         "position" : [ 158.0, 30.0 ],
+         "type" : "scale"
+      },
+      {
+         "comment" : "=== TOPOLOGY SYNTH (main voice) ===",
+         "name" : "topology",
+         "position" : [ 50.0, 200.0 ],
+         "target" : "main mix",
+         "type" : "topologysynth"
+      },
+      {
+         "comment" : "=== NOTE SEQUENCER driving the topology synth ===",
+         "name" : "melody",
+         "position" : [ 50.0, 500.0 ],
+         "target" : "topology",
+         "type" : "notesequencer"
+      },
+      {
+         "comment" : "=== COUPLED OSCILLATORS (bell/gamelan layer) ===",
+         "name" : "bells",
+         "position" : [ 420.0, 200.0 ],
+         "target" : "main mix",
+         "type" : "coupledosc"
+      },
+      {
+         "comment" : "=== ARPEGGIATOR feeding the bells ===",
+         "name" : "arp",
+         "position" : [ 420.0, 500.0 ],
+         "target" : "bells",
+         "type" : "arpeggiator"
+      },
+      {
+         "comment" : "=== STEP SEQ feeding the arp ===",
+         "name" : "bell trigger",
+         "position" : [ 420.0, 600.0 ],
+         "target" : "arp",
+         "type" : "notesequencer"
+      },
+      {
+         "comment" : "=== MEMBRANE SYNTH (percussion) ===",
+         "name" : "drum",
+         "position" : [ 800.0, 200.0 ],
+         "target" : "drum filter",
+         "type" : "membranesynth"
+      },
+      {
+         "comment" : "=== TOPOLOGY FILTER on the drum ===",
+         "name" : "drum filter",
+         "position" : [ 800.0, 620.0 ],
+         "target" : "main mix",
+         "type" : "topologyfilter"
+      },
+      {
+         "comment" : "=== DRUM SEQUENCER ===",
+         "name" : "kick pattern",
+         "position" : [ 1100.0, 200.0 ],
+         "target" : "drum",
+         "type" : "drumsequencer"
+      },
+      {
+         "comment" : "=== LATTICE SYNTH (bass drone) ===",
+         "name" : "bass",
+         "position" : [ 1100.0, 500.0 ],
+         "target" : "main mix",
+         "type" : "latticesynth"
+      },
+      {
+         "comment" : "=== FOUR ON THE FLOOR for bass ===",
+         "name" : "bass trigger",
+         "position" : [ 1100.0, 750.0 ],
+         "target" : "bass",
+         "type" : "fouronthefloor"
+      },
+      {
+         "comment" : "=== MAIN MIX → OUTPUT ===",
+         "name" : "main mix",
+         "position" : [ 1450.0, 400.0 ],
+         "target" : "splitter",
+         "type" : "gain"
+      },
+      {
+         "name" : "splitter",
+         "position" : [ 1450.0, 480.0 ],
+         "target" : "output 1",
+         "target2" : "output 2",
+         "type" : "splitter"
+      },
+      {
+         "channels" : 0,
+         "name" : "output 1",
+         "position" : [ 1430.0, 560.0 ],
+         "type" : "output"
+      },
+      {
+         "channels" : 1,
+         "name" : "output 2",
+         "position" : [ 1530.0, 560.0 ],
+         "type" : "output"
+      },
+      {
+         "comment" : "=== COHOMOLOGY SYNTH (ambient pad) ===",
+         "name" : "pad",
+         "position" : [ 50.0, 750.0 ],
+         "target" : "main mix",
+         "type" : "cohomologysynth"
+      },
+      {
+         "comment" : "=== SLOW NOTES for pad ===",
+         "name" : "pad notes",
+         "position" : [ 50.0, 1050.0 ],
+         "target" : "pad",
+         "type" : "notesequencer"
+      }
+   ],
+   "zoomlocations" : []
+}
