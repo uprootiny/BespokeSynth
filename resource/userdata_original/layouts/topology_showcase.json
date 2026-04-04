@@ -14,7 +14,7 @@
          "comment" : "=== TOPOLOGY SYNTH (main voice) ===",
          "name" : "topology",
          "position" : [ 50.0, 200.0 ],
-         "target" : "main mix",
+         "target" : "delay",
          "type" : "topologysynth"
       },
       {
@@ -79,6 +79,13 @@
          "position" : [ 1100.0, 750.0 ],
          "target" : "bass",
          "type" : "fouronthefloor"
+      },
+      {
+         "comment" : "=== TOPOLOGY DELAY on the mix ===",
+         "name" : "delay",
+         "position" : [ 1450.0, 200.0 ],
+         "target" : "main mix",
+         "type" : "topologydelay"
       },
       {
          "comment" : "=== MAIN MIX → OUTPUT ===",

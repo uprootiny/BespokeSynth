@@ -286,6 +286,7 @@
 #include "TopologyFilter.h"
 #include "CoupledOscillators.h"
 #include "MembraneSynth.h"
+#include "TopologyDelay.h"
 
 #include <juce_core/juce_core.h>
 
@@ -316,6 +317,7 @@ ModuleFactory::ModuleFactory()
    REGISTER(TopologyFilter, topologyfilter, kModuleCategory_Audio);
    REGISTER(CoupledOscillators, coupledosc, kModuleCategory_Synth);
    REGISTER(MembraneSynth, membranesynth, kModuleCategory_Synth);
+   REGISTER(TopologyDelay, topologydelay, kModuleCategory_Audio);
    REGISTER(WhiteKeys, whitekeys, kModuleCategory_Note);
    //REGISTER(Kicker, kicker, kModuleCategory_Note);
    REGISTER(RingModulator, ringmodulator, kModuleCategory_Audio);

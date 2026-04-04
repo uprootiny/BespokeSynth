@@ -291,6 +291,8 @@ target_sources(BespokeSynth PRIVATE
     CoupledOscillators.h
     MembraneSynth.cpp
     MembraneSynth.h
+    TopologyDelay.cpp
+    TopologyDelay.h
     KeyboardDisplay.cpp
     KeyboardDisplay.h
     Kicker.cpp
