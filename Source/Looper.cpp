@@ -680,14 +680,95 @@ void Looper::DrawModule()
       nvgFill(gNanoVG);
    }
 
-   // Bar dividers with subtler styling
-   ofSetColor(255, 255, 255, gModuleDrawAlpha * .2f);
-   ofSetLineWidth(.5f);
-   for (int i = 1; i < mNumBars; ++i)
+   // Beat grid: bar dividers (bright) + beat subdivisions (subtle)
    {
-      float x = kBufferWidth / mNumBars * i;
-      ofLine(x, 2, x, kBufferHeight - 2);
+      int beatsPerBar = TheTransport->GetTimeSigTop();
+      int totalBeats = mNumBars * beatsPerBar;
+
+      // Subdivisions (16th notes) — very faint
+      int totalSixteenths = totalBeats * 4;
+      ofSetColor(255, 255, 255, gModuleDrawAlpha * .04f);
+      ofSetLineWidth(.5f);
+      for (int i = 1; i < totalSixteenths; ++i)
+      {
+         if (i % 4 == 0) continue; // skip beats (drawn separately)
+         float x = kBufferWidth * (float)i / totalSixteenths;
+         ofLine(x, kBufferHeight * 0.3f, x, kBufferHeight * 0.7f);
+      }
+
+      // Beat subdivisions — subtle
+      ofSetColor(255, 255, 255, gModuleDrawAlpha * .08f);
+      for (int i = 1; i < totalBeats; ++i)
+      {
+         if (i % beatsPerBar == 0) continue; // skip bar lines
+         float x = kBufferWidth * (float)i / totalBeats;
+         ofLine(x, 4, x, kBufferHeight - 4);
+      }
+
+      // Bar lines — visible
+      ofSetColor(255, 255, 255, gModuleDrawAlpha * .2f);
+      ofSetLineWidth(1);
+      for (int i = 1; i < mNumBars; ++i)
+      {
+         float x = kBufferWidth * (float)i / mNumBars;
+         ofLine(x, 1, x, kBufferHeight - 1);
+      }
    }
+
+   // FourTet slice boundaries (when FourTet is active)
+   if (mFourTet > 0)
+   {
+      ofSetColor(255, 200, 0, gModuleDrawAlpha * mFourTet * .3f);
+      ofSetLineWidth(1);
+      int slicesPerBar = mFourTetSlices;
+      int totalSlices = mNumBars * slicesPerBar;
+      for (int i = 0; i < totalSlices; ++i)
+      {
+         float x = kBufferWidth * (float)i / totalSlices;
+         ofLine(x, 0, x, kBufferHeight);
+         // Small triangle marker at top
+         ofFill();
+         ofTriangle(x - 2, 0, x + 2, 0, x, 4);
+      }
+   }
+
+   // Mute overlay
+   if (mMute)
+   {
+      NVGpaint muteOverlay = nvgLinearGradient(gNanoVG, 0, 0, 0, kBufferHeight,
+         nvgRGBA(0, 0, 0, (int)(gModuleDrawAlpha * .4f)),
+         nvgRGBA(0, 0, 0, (int)(gModuleDrawAlpha * .5f)));
+      nvgBeginPath(gNanoVG);
+      nvgRect(gNanoVG, 0, 0, kBufferWidth, kBufferHeight);
+      nvgFillPaint(gNanoVG, muteOverlay);
+      nvgFill(gNanoVG);
+
+      // "MUTE" text centered
+      ofSetColor(255, 80, 80, gModuleDrawAlpha * .5f);
+      DrawTextNormal("MUTED", kBufferWidth / 2 - 18, kBufferHeight / 2 + 4, 12);
+   }
+
+   // Pitch shift indicator (when pitch != 1.0)
+   if (fabsf(mPitchShift - 1.0f) > 0.01f)
+   {
+      char pitchStr[16];
+      if (mPitchShift > 1)
+         snprintf(pitchStr, sizeof(pitchStr), "+%.1fst", 12.0f * log2f(mPitchShift));
+      else
+         snprintf(pitchStr, sizeof(pitchStr), "%.1fst", 12.0f * log2f(mPitchShift));
+      ofSetColor(180, 180, 255, gModuleDrawAlpha * .5f);
+      DrawTextNormal(pitchStr, kBufferWidth - 40, 10, 9);
+   }
+
+   // Loop count indicator (bottom-left corner)
+   if (mLoopCount > 0)
+   {
+      char loopStr[16];
+      snprintf(loopStr, sizeof(loopStr), "x%d", mLoopCount);
+      ofSetColor(255, 255, 255, gModuleDrawAlpha * .15f);
+      DrawTextNormal(loopStr, 3, kBufferHeight - 3, 8);
+   }
+
    ofSetColor(255, 255, 255, gModuleDrawAlpha);
 
    ofPopMatrix();
