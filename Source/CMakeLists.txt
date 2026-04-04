@@ -297,6 +297,10 @@ target_sources(BespokeSynth PRIVATE
     CohomologyVerb.h
     BowedString.cpp
     BowedString.h
+    FMCluster.cpp
+    FMCluster.h
+    FibonacciComb.cpp
+    FibonacciComb.h
     KeyboardDisplay.cpp
     KeyboardDisplay.h
     Kicker.cpp

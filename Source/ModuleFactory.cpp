@@ -289,6 +289,8 @@
 #include "TopologyDelay.h"
 #include "CohomologyVerb.h"
 #include "BowedString.h"
+#include "FMCluster.h"
+#include "FibonacciComb.h"
 
 #include <juce_core/juce_core.h>
 
@@ -322,6 +324,8 @@ ModuleFactory::ModuleFactory()
    REGISTER(TopologyDelay, topologydelay, kModuleCategory_Audio);
    REGISTER(CohomologyVerb, cohomologyverb, kModuleCategory_Audio);
    REGISTER(BowedString, bowedstring, kModuleCategory_Synth);
+   REGISTER(FMCluster, fmcluster, kModuleCategory_Synth);
+   REGISTER(FibonacciComb, fibonaccicomb, kModuleCategory_Audio);
    REGISTER(WhiteKeys, whitekeys, kModuleCategory_Note);
    //REGISTER(Kicker, kicker, kModuleCategory_Note);
    REGISTER(RingModulator, ringmodulator, kModuleCategory_Audio);
