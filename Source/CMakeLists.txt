@@ -293,6 +293,8 @@ target_sources(BespokeSynth PRIVATE
     MembraneSynth.h
     TopologyDelay.cpp
     TopologyDelay.h
+    CohomologyVerb.cpp
+    CohomologyVerb.h
     KeyboardDisplay.cpp
     KeyboardDisplay.h
     Kicker.cpp

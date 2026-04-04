@@ -156,14 +156,19 @@ void LatticeSynth::ScatterAtNode(int i)
    outFwd = ApplyCorruption(outFwd, mNodes[i].corruption, mNodes[i].corruptionDrive);
    outBwd = ApplyCorruption(outBwd, mNodes[i].corruption, mNodes[i].corruptionDrive);
 
-   // DC blocker on BOTH traveling waves (1-pole highpass, fc ~20Hz)
-   // y[n] = x[n] - x[n-1] + alpha * y[n-1], alpha = (1 + cos(2*pi*fc/sr)) / (...)
-   // Simplified: y = alpha * (y_prev + x - x_prev), with alpha ~0.997 at 48kHz/20Hz
-   float dcAlpha = 1.0f - (125.66f / gSampleRate); // 2*pi*20/sr, precise
-   float dcFwd = outFwd - mNodes[i].dcState + dcAlpha * mNodes[i].dcState;
-   mNodes[i].dcState = outFwd; // store for next sample
+   // DC blocker: proper first-order highpass at 20Hz
+   // y[n] = x[n] - x[n-1] + R * y[n-1], where R = exp(-2*pi*fc/sr)
+   // This gives -3dB at fc=20Hz and passes everything above.
+   {
+      static float sR = expf(-FTWO_PI * 20.0f / gSampleRate);
+      float xn = outFwd;
+      float yn = xn - mNodes[i].dcState + sR * mNodes[i].dcPrevY;
+      mNodes[i].dcState = xn;   // x[n-1]
+      mNodes[i].dcPrevY = yn;   // y[n-1]
+      outFwd = yn;
+   }
 
-   mNodes[i].forward = dcFwd * mDamping;
+   mNodes[i].forward = outFwd * mDamping;
    mNodes[i].backward = outBwd * mDamping;
 }
 
@@ -261,6 +266,7 @@ void LatticeSynth::PlayNote(NoteMessage note)
          mNodes[i].forward = 0;
          mNodes[i].backward = 0;
          mNodes[i].dcState = 0;
+         mNodes[i].dcPrevY = 0;
          mNodes[i].writePos = 0;
          mNodes[i].allpassStateFwd = 0;
          mNodes[i].allpassStateBack = 0;

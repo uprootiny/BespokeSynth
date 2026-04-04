@@ -1,0 +1,121 @@
+{
+   "modules" : [
+      {
+         "name" : "transport",
+         "position" : [ 14.0, 30.0 ],
+         "type" : "transport"
+      },
+      {
+         "name" : "scale",
+         "position" : [ 158.0, 30.0 ],
+         "type" : "scale"
+      },
+      {
+         "comment" : "=== VOICE 1: Membrane → TopologyFilter → CohomologyVerb ===",
+         "comment2" : "Drum hit filtered by lattice resonance, then through topology reverb",
+         "name" : "membrane",
+         "position" : [ 50.0, 150.0 ],
+         "target" : "lattice filter",
+         "type" : "membranesynth"
+      },
+      {
+         "name" : "drum seq",
+         "position" : [ 50.0, 560.0 ],
+         "target" : "membrane",
+         "type" : "drumsequencer"
+      },
+      {
+         "name" : "lattice filter",
+         "position" : [ 50.0, 600.0 ],
+         "target" : "cave verb",
+         "type" : "topologyfilter"
+      },
+      {
+         "comment" : "CohomologyVerb in cave mode for deep resonant space",
+         "name" : "cave verb",
+         "position" : [ 350.0, 600.0 ],
+         "target" : "main mix",
+         "type" : "cohomologyverb"
+      },
+      {
+         "comment" : "=== VOICE 2: CoupledOsc → TopologyDelay (feedback shimmer) ===",
+         "name" : "bells",
+         "position" : [ 400.0, 150.0 ],
+         "target" : "shimmer delay",
+         "type" : "coupledosc"
+      },
+      {
+         "name" : "bell notes",
+         "position" : [ 400.0, 450.0 ],
+         "target" : "bells",
+         "type" : "notesequencer"
+      },
+      {
+         "comment" : "TopologyDelay with high diffusion = shimmer reverb-like effect",
+         "name" : "shimmer delay",
+         "position" : [ 700.0, 150.0 ],
+         "target" : "main mix",
+         "type" : "topologydelay"
+      },
+      {
+         "comment" : "=== VOICE 3: TopologySynth → self (feedback via send) ===",
+         "name" : "lead",
+         "position" : [ 750.0, 400.0 ],
+         "target" : "hall verb",
+         "type" : "topologysynth"
+      },
+      {
+         "name" : "lead seq",
+         "position" : [ 750.0, 700.0 ],
+         "target" : "lead",
+         "type" : "notesequencer"
+      },
+      {
+         "comment" : "CohomologyVerb in hall mode for the lead",
+         "name" : "hall verb",
+         "position" : [ 1050.0, 400.0 ],
+         "target" : "main mix",
+         "type" : "cohomologyverb"
+      },
+      {
+         "comment" : "=== VOICE 4: LatticeSynth (Möbius bass) ===",
+         "name" : "mobius bass",
+         "position" : [ 1050.0, 150.0 ],
+         "target" : "main mix",
+         "type" : "latticesynth"
+      },
+      {
+         "name" : "bass trigger",
+         "position" : [ 1050.0, 400.0 ],
+         "target" : "mobius bass",
+         "type" : "fouronthefloor"
+      },
+      {
+         "comment" : "=== OUTPUT CHAIN ===",
+         "name" : "main mix",
+         "position" : [ 1400.0, 350.0 ],
+         "target" : "splitter",
+         "type" : "gain"
+      },
+      {
+         "name" : "splitter",
+         "position" : [ 1400.0, 430.0 ],
+         "target" : "output 1",
+         "target2" : "output 2",
+         "type" : "splitter"
+      },
+      {
+         "channels" : 0,
+         "name" : "output 1",
+         "position" : [ 1380.0, 510.0 ],
+         "type" : "output"
+      },
+      {
+         "channels" : 1,
+         "name" : "output 2",
+         "position" : [ 1480.0, 510.0 ],
+         "type" : "output"
+      }
+   ],
+   "zoomlocations" : []
+}

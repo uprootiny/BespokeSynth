@@ -103,8 +103,9 @@ struct LatticeNode
    int delayLength{ 100 };
    int writePos{ 0 };
 
-   // DC blocker state (1-pole highpass at ~20Hz)
-   float dcState{ 0 };
+   // DC blocker state (proper first-order highpass)
+   float dcState{ 0 };   // x[n-1]
+   float dcPrevY{ 0 };   // y[n-1]
 
    // Allpass interpolation state (per-edge, for fractional delay)
    float allpassStateFwd{ 0 };
