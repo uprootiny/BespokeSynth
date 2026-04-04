@@ -262,6 +262,37 @@ void IDrawableModule::DrawFrame(float w, float h, bool drawModule, float& titleB
    //gModuleShader.end();
    ofNoFill();
 
+   // Upholstery: inner bevel + soft edge glow for depth
+   if (IsEnabled() && GetParent() == nullptr && GetModuleCategory() != kModuleCategory_Other)
+   {
+      // Top edge highlight (subtle light from above)
+      NVGpaint topHighlight = nvgLinearGradient(gNanoVG,
+         0, -titleBarHeight, 0, -titleBarHeight + 4,
+         nvgRGBA(255, 255, 255, (int)(20 + highlight * 30)),
+         nvgRGBA(255, 255, 255, 0));
+      nvgBeginPath(gNanoVG);
+      nvgRoundedRect(gNanoVG, 1, -titleBarHeight + 1, w - 2, 5, gCornerRoundness * 2);
+      nvgFillPaint(gNanoVG, topHighlight);
+      nvgFill(gNanoVG);
+
+      // Bottom edge shadow (subtle depth)
+      NVGpaint bottomShadow = nvgLinearGradient(gNanoVG,
+         0, h - 4, 0, h,
+         nvgRGBA(0, 0, 0, 0),
+         nvgRGBA(0, 0, 0, (int)(30 + highlight * 20)));
+      nvgBeginPath(gNanoVG);
+      nvgRoundedRect(gNanoVG, 1, h - 5, w - 2, 5, gCornerRoundness * 2);
+      nvgFillPaint(gNanoVG, bottomShadow);
+      nvgFill(gNanoVG);
+
+      // Inner border: thin bright line inside the module rect for "panel" feel
+      nvgBeginPath(gNanoVG);
+      nvgRoundedRect(gNanoVG, 1, -titleBarHeight + 1, w - 2, h + titleBarHeight - 2, 2 + gCornerRoundness * 2);
+      nvgStrokeColor(gNanoVG, nvgRGBA(color.r * .4f, color.g * .4f, color.b * .4f, (int)(25 + highlight * 40)));
+      nvgStrokeWidth(gNanoVG, 0.5f);
+      nvgStroke(gNanoVG);
+   }
+
    if (IsEnabled())
       gModuleDrawAlpha = 255;
    else

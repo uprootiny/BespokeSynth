@@ -289,6 +289,8 @@ target_sources(BespokeSynth PRIVATE
     TopologyFilter.h
     CoupledOscillators.cpp
     CoupledOscillators.h
+    MembraneSynth.cpp
+    MembraneSynth.h
     KeyboardDisplay.cpp
     KeyboardDisplay.h
     Kicker.cpp
