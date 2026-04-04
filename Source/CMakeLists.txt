@@ -287,6 +287,8 @@ target_sources(BespokeSynth PRIVATE
     TopologySynth.h
     TopologyFilter.cpp
     TopologyFilter.h
+    CoupledOscillators.cpp
+    CoupledOscillators.h
     KeyboardDisplay.cpp
     KeyboardDisplay.h
     Kicker.cpp

@@ -284,6 +284,7 @@
 #include "CohomologySynth.h"
 #include "TopologySynth.h"
 #include "TopologyFilter.h"
+#include "CoupledOscillators.h"
 
 #include <juce_core/juce_core.h>
 
@@ -312,6 +313,7 @@ ModuleFactory::ModuleFactory()
    REGISTER(CohomologySynth, cohomologysynth, kModuleCategory_Synth);
    REGISTER(TopologySynth, topologysynth, kModuleCategory_Synth);
    REGISTER(TopologyFilter, topologyfilter, kModuleCategory_Audio);
+   REGISTER(CoupledOscillators, coupledosc, kModuleCategory_Synth);
    REGISTER(WhiteKeys, whitekeys, kModuleCategory_Note);
    //REGISTER(Kicker, kicker, kModuleCategory_Note);
    REGISTER(RingModulator, ringmodulator, kModuleCategory_Audio);
