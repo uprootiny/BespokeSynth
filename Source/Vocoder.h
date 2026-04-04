@@ -72,8 +72,8 @@ private:
    void DrawModule() override;
    void GetModuleDimensions(float& w, float& h) override
    {
-      w = 235;
-      h = 170;
+      w = 300;
+      h = 310;
    }
 
    FFTData mFFTData{ VOCODER_WINDOW_SIZE, FFT_FREQDOMAIN_SIZE };
@@ -111,4 +111,9 @@ private:
    GateEffect mGate;
 
    bool mCarrierDataSet{ false };
+
+   // Visualization: spectral magnitudes (updated once per process call)
+   float mModulatorMags[FFT_FREQDOMAIN_SIZE]{};
+   float mCarrierMags[FFT_FREQDOMAIN_SIZE]{};
+   float mOutputMags[FFT_FREQDOMAIN_SIZE]{};
 };

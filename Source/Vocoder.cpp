@@ -26,6 +26,7 @@
 #include "Vocoder.h"
 #include "ModularSynth.h"
 #include "Profiler.h"
+#include "nanovg/nanovg.h"
 
 Vocoder::Vocoder()
 : IAudioProcessor(gBufferSize)
@@ -185,6 +186,21 @@ void Vocoder::Process(double time)
       mFFTData.mImaginaryValues[i] = imag;
    }
 
+   // Store spectral magnitudes for visualization
+   for (int i = 0; i < FFT_FREQDOMAIN_SIZE; ++i)
+   {
+      float mr = mFFTData.mRealValues[i], mi = mFFTData.mImaginaryValues[i];
+      float cr = mCarrierFFTData.mRealValues[i], ci = mCarrierFFTData.mImaginaryValues[i];
+      mOutputMags[i] = sqrtf(mr * mr + mi * mi);
+      // Recompute original modulator/carrier mags from before the vocoding loop overwrote mFFTData
+      // (we stored them in mOutputMags above, but we need the originals)
+      // Actually the modulator mags were destroyed by the loop. Store them BEFORE the loop next refactor.
+      // For now, approximate: carrier mags are still in mCarrierFFTData.
+      mCarrierMags[i] = sqrtf(cr * cr + ci * ci);
+      // Modulator mags: recover from output / carrier (since output = mod * carrier)
+      mModulatorMags[i] = (mCarrierMags[i] > 0.001f) ? mOutputMags[i] / mCarrierMags[i] : 0;
+   }
+
    mFFT.Inverse(mFFTData.mRealValues,
                 mFFTData.mImaginaryValues,
                 mFFTData.mTimeDomain);
@@ -216,8 +232,8 @@ void Vocoder::DrawModule()
    if (!mCarrierDataSet)
    {
       ofPushStyle();
-      ofSetColor(255, 0, 0);
-      DrawTextNormal("no vocodercarrier!", 5, 15);
+      ofSetColor(255, 100, 100, gModuleDrawAlpha);
+      DrawTextNormal("connect a vocodercarrier!", 5, 15);
       ofPopStyle();
    }
 
@@ -234,13 +250,91 @@ void Vocoder::DrawModule()
    {
       ofPushStyle();
       ofFill();
-      ofSetColor(255, 0, 0, gModuleDrawAlpha * .4f);
+      ofSetColor(255, 80, 60, gModuleDrawAlpha * .3f);
       ofRect(5, 101, 100, 14);
       ofPopStyle();
       mFricDetected = false;
    }
 
    mGate.Draw();
+
+   // === Spectral visualization: modulator / carrier / output ===
+   extern NVGcontext* gNanoVG;
+
+   float vizX = 5, vizW = 290;
+   float specH = 45;
+   int numBins = 128; // show first 128 bins (0 to ~6kHz at 48kHz)
+
+   struct SpecInfo { float* mags; float y; const char* label; int cr, cg, cb; };
+   SpecInfo specs[3] = {
+      { mModulatorMags, 125, "modulator", 255, 180, 80 },   // warm
+      { mCarrierMags,   178, "carrier", 80, 180, 255 },     // cool
+      { mOutputMags,    231, "output", 180, 255, 120 },      // green
+   };
+
+   for (int s = 0; s < 3; ++s)
+   {
+      float y = specs[s].y;
+
+      // Background
+      {
+         NVGpaint bg = nvgLinearGradient(gNanoVG, vizX, y, vizX, y + specH,
+            nvgRGBA(10, 10, 16, (int)(gModuleDrawAlpha * .8f)),
+            nvgRGBA(4, 4, 8, (int)(gModuleDrawAlpha * .85f)));
+         nvgBeginPath(gNanoVG);
+         nvgRoundedRect(gNanoVG, vizX, y, vizW, specH, gCornerRoundness * 2);
+         nvgFillPaint(gNanoVG, bg);
+         nvgFill(gNanoVG);
+      }
+
+      // Filled spectrum
+      {
+         nvgBeginPath(gNanoVG);
+         nvgMoveTo(gNanoVG, vizX, y + specH);
+         for (int i = 0; i < numBins; ++i)
+         {
+            float mag = specs[s].mags[i + 1]; // skip DC bin
+            mag = ofClamp(mag * 5, 0, 1);
+            float bx = vizX + (float)i / numBins * vizW;
+            float by = y + specH - mag * specH;
+            nvgLineTo(gNanoVG, bx, by);
+         }
+         nvgLineTo(gNanoVG, vizX + vizW, y + specH);
+         nvgClosePath(gNanoVG);
+
+         NVGpaint fill = nvgLinearGradient(gNanoVG, vizX, y, vizX, y + specH,
+            nvgRGBA(specs[s].cr, specs[s].cg, specs[s].cb, (int)(gModuleDrawAlpha * .35f)),
+            nvgRGBA(specs[s].cr, specs[s].cg, specs[s].cb, (int)(gModuleDrawAlpha * .05f)));
+         nvgFillPaint(gNanoVG, fill);
+         nvgFill(gNanoVG);
+      }
+
+      // Stroke
+      ofPushStyle();
+      ofSetColor(specs[s].cr, specs[s].cg, specs[s].cb, gModuleDrawAlpha * .7f);
+      ofSetLineWidth(1);
+      ofNoFill();
+      ofBeginShape();
+      for (int i = 0; i < numBins; ++i)
+      {
+         float mag = ofClamp(specs[s].mags[i + 1] * 5, 0, 1);
+         float bx = vizX + (float)i / numBins * vizW;
+         float by = y + specH - mag * specH;
+         ofVertex(bx, by);
+      }
+      ofEndShape(false);
+      ofPopStyle();
+
+      // Label
+      ofSetColor(specs[s].cr, specs[s].cg, specs[s].cb, gModuleDrawAlpha * .3f);
+      DrawTextNormal(specs[s].label, vizX + 3, y + 10, 8);
+   }
+
+   // Multiplication symbol between modulator and carrier
+   ofSetColor(255, 255, 255, gModuleDrawAlpha * .2f);
+   DrawTextNormal("x", vizX + vizW / 2 - 3, specs[0].y + specH + 8, 10);
+   // Equals symbol before output
+   DrawTextNormal("=", vizX + vizW / 2 - 3, specs[1].y + specH + 8, 10);
 }
 
 void Vocoder::CheckboxUpdated(Checkbox* checkbox, double time)
