@@ -285,6 +285,8 @@ target_sources(BespokeSynth PRIVATE
     CohomologySynth.h
     TopologySynth.cpp
     TopologySynth.h
+    TopologyFilter.cpp
+    TopologyFilter.h
     KeyboardDisplay.cpp
     KeyboardDisplay.h
     Kicker.cpp
