@@ -23,7 +23,7 @@ CoupledOscillators::CoupledOscillators()
 : IAudioProcessor(gBufferSize)
 , mWriteBuffer(gBufferSize)
 {
-   mEnvelope.Set(3, 0, 1, 800);
+   mEnvelope.Set(1, 20, 0.5f, 500); // bell-like: percussive attack, moderate decay, natural ring-out
 
    // Default frequency ratios: slightly detuned from harmonic
    mMasses[0].freqRatio = 1.0f;

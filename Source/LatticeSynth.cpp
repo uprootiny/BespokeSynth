@@ -28,7 +28,7 @@ LatticeSynth::LatticeSynth()
 : IAudioProcessor(gBufferSize)
 , mWriteBuffer(gBufferSize)
 {
-   mEnvelope.Set(3, 0, 1, 300);
+   mEnvelope.Set(2, 30, 0.7f, 200); // plucked: fast attack, some decay, moderate release
    UpdateDelayLengths();
 }
 

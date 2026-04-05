@@ -359,6 +359,33 @@ void FMCluster::DrawModule()
    DrawTextNormal("fm cluster", vizX + vizW - 55, vizY + vizH - 5, 8);
 }
 
+void FMCluster::OnClicked(float x, float y, bool right)
+{
+   IDrawableModule::OnClicked(x, y, right);
+
+   // Click an operator node to trigger a note through it
+   float vizX = 10, vizY = 172, vizW = 260, vizH = 180;
+   float cx = vizX + vizW / 2, cy = vizY + vizH / 2;
+   float rad = std::min(vizW, vizH) * 0.32f;
+
+   for (int i = 0; i < mNumOps; ++i)
+   {
+      float angle = (float)i / mNumOps * FTWO_PI - FPI / 2;
+      float nx = cx + cosf(angle) * rad;
+      float ny = cy + sinf(angle) * rad;
+      float dx = x - nx, dy = y - ny;
+      if (dx * dx + dy * dy < 16 * 16)
+      {
+         // Trigger note with this op as primary carrier
+         if (mFrequency < 20) mFrequency = 261.63f;
+         mEnvelope.Start(gTime, 0.8f);
+         for (int j = 0; j < mNumOps; ++j)
+            mOps[j].phase = 0;
+         return;
+      }
+   }
+}
+
 void FMCluster::LoadLayout(const ofxJSONElement& moduleInfo)
 {
    mModuleSaveData.LoadInt("ops", moduleInfo, 4, 2, kFMMaxOps, true);

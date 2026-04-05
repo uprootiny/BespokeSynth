@@ -588,6 +588,48 @@ void TopologySynth::DrawModule()
 // SAVE/LOAD
 // ============================================================
 
+void TopologySynth::OnClicked(float x, float y, bool right)
+{
+   IDrawableModule::OnClicked(x, y, right);
+
+   // Click in lattice viz area to trigger note
+   float vizX = 5, vizY = 58, vizW = 360, vizH = 125;
+   if (x >= vizX && x <= vizX + vizW && y >= vizY && y <= vizY + vizH)
+   {
+      if (mFrequency < 20) mFrequency = 261.63f;
+      UpdateDelayLengths();
+      ClearState();
+      mAmpEnv.Start(gTime, 0.8f);
+      mExciteAmount = 0.8f;
+      mNoteOn = true;
+
+      // Determine which node was closest to click
+      float cx = vizX + vizW / 2, cy = vizY + vizH / 2;
+      bool isRing = (mBoundary == kTopo_Ring || mBoundary == kTopo_Mobius);
+      float bestDist = 999;
+      for (int i = 0; i < mNumNodes; ++i)
+      {
+         float nx, ny;
+         if (isRing)
+         {
+            float rad = std::min(vizW, vizH) * 0.35f;
+            float angle = (float)i / mNumNodes * FTWO_PI - FPI / 2;
+            nx = cx + cosf(angle) * rad;
+            ny = cy + sinf(angle) * rad;
+         }
+         else
+         {
+            float t = mNumNodes > 1 ? (float)i / (mNumNodes - 1) : 0.5f;
+            nx = vizX + 20 + t * (vizW - 40);
+            ny = cy;
+         }
+         float dx = x - nx, dy = y - ny;
+         float dist = dx * dx + dy * dy;
+         if (dist < bestDist) { bestDist = dist; mExciteNode = i; }
+      }
+   }
+}
+
 void TopologySynth::LoadLayout(const ofxJSONElement& moduleInfo)
 {
    mModuleSaveData.LoadInt("nodes", moduleInfo, 6, 3, kTopoMaxNodes, true);

@@ -31,7 +31,7 @@ CohomologySynth::CohomologySynth()
 : IAudioProcessor(gBufferSize)
 , mWriteBuffer(gBufferSize)
 {
-   mEnvelope.Set(3, 0, 1, 500);
+   mEnvelope.Set(2, 50, 0.6f, 400); // modal: fast attack, gentle decay, medium release
    BuildComplex(kPreset_Tetrahedron);
 }
 
@@ -897,6 +897,33 @@ void CohomologySynth::DrawModule()
 // ============================================================
 // SAVE/LOAD
 // ============================================================
+
+void CohomologySynth::OnClicked(float x, float y, bool right)
+{
+   IDrawableModule::OnClicked(x, y, right);
+
+   // Click in viz area to excite a vertex
+   float vizX = 10, vizY = 60, vizW = 300, vizH = 220;
+   float cx = vizX + vizW / 2, cy = vizY + vizH / 2;
+   float scale = std::min(vizW, vizH) * 0.38f;
+
+   for (int v = 0; v < mNumVertices; ++v)
+   {
+      float vx = cx + mVertexX[v] * scale;
+      float vy = cy + mVertexY[v] * scale;
+      float dx = x - vx, dy = y - vy;
+      if (dx * dx + dy * dy < 18 * 18)
+      {
+         mExciteVertex = v;
+         if (mFrequency < 20) { mFrequency = 261.63f; mBaseFreq = 261.63f; }
+         for (int m = 0; m < mActiveModes; ++m)
+            mModes[m].amplitude = 0;
+         ExciteModes(0.8f, v);
+         mEnvelope.Start(gTime, 0.8f);
+         return;
+      }
+   }
+}
 
 void CohomologySynth::LoadLayout(const ofxJSONElement& moduleInfo)
 {

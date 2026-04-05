@@ -68,6 +68,7 @@ public:
 private:
    void DrawModule() override;
    void GetModuleDimensions(float& width, float& height) override;
+   void OnClicked(float x, float y, bool right) override;
 
    // Operators
    FMOperator mOps[kFMMaxOps];
