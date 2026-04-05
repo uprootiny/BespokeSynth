@@ -343,10 +343,11 @@ void BowedString::DrawModule()
          ofNoFill();
          ofBeginShape();
          int vizSamples = std::min(mStringViz.Size(), (int)vizW - 16);
+         if (vizSamples < 2) vizSamples = 2; // prevent division by zero
          for (int i = 0; i < vizSamples; ++i)
          {
             float sample = mStringViz.GetSample(vizSamples - 1 - i, 0);
-            float x = vizX + 8 + (float)i / vizSamples * (vizW - 16);
+            float x = vizX + 8 + (float)i / (vizSamples - 1) * (vizW - 16);
             float y = sy + sample * stringSpacing * 0.4f;
             ofVertex(x, y);
          }

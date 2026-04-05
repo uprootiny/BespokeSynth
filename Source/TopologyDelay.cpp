@@ -85,20 +85,22 @@ void TopologyDelay::Process(double time)
          bSnap[i] = mNodes[i].bwd;
       }
 
-      // Propagate ring
+      // Propagate ring: edge i carries forward (i→i+1) and backward (i+1→i)
       for (int i = 0; i < kDelayLatticeNodes; ++i)
       {
          int next = (i + 1) % kDelayLatticeNodes;
-         auto& src = mNodes[i];
-         src.buf[src.writePos] = fSnap[i];
-         int ridx = (src.writePos - (src.len - 1) + src.len * 2) % src.len;
-         mNodes[next].fwd = src.buf[ridx];
+         auto& edge = mNodes[i]; // edge buffer owned by node i
 
-         src.bufBack[src.writePos] = bSnap[next];
-         int ridx2 = (src.writePos - (src.len - 1) + src.len * 2) % src.len;
-         mNodes[i].bwd = mNodes[next].bufBack[ridx2];
+         // Forward: i → delay → i+1
+         edge.buf[edge.writePos] = fSnap[i];
+         int ridx = (edge.writePos - (edge.len - 1) + edge.len * 2) % edge.len;
+         mNodes[next].fwd = edge.buf[ridx];
 
-         src.writePos = (src.writePos + 1) % src.len;
+         // Backward: i+1 → same edge delay → i (same length, no mismatch)
+         edge.bufBack[edge.writePos] = bSnap[next];
+         mNodes[i].bwd = edge.bufBack[ridx]; // same index, same buffer length
+
+         edge.writePos = (edge.writePos + 1) % edge.len;
       }
 
       // Collect diffused output from all nodes

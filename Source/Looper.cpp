@@ -682,8 +682,8 @@ void Looper::DrawModule()
 
    // Beat grid: bar dividers (bright) + beat subdivisions (subtle)
    {
-      int beatsPerBar = TheTransport->GetTimeSigTop();
-      int totalBeats = mNumBars * beatsPerBar;
+      int beatsPerBar = std::max(1, TheTransport->GetTimeSigTop());
+      int totalBeats = std::max(1, mNumBars * beatsPerBar);
 
       // Subdivisions (16th notes) — very faint
       int totalSixteenths = totalBeats * 4;

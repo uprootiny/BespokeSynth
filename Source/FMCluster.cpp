@@ -145,7 +145,9 @@ void FMCluster::Process(double time)
          }
 
          // FM synthesis: sin(phase + modulation)
-         opOut[i] = sinf(mOps[i].phase + modSum);
+         // Wrap the argument to prevent float precision loss at large modSum
+         float fmPhase = fmodf(mOps[i].phase + modSum, FTWO_PI);
+         opOut[i] = sinf(fmPhase);
 
          // Advance phase
          mOps[i].phase += phaseInc[i];
