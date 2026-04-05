@@ -80,6 +80,7 @@ public:
 private:
    void DrawModule() override;
    void GetModuleDimensions(float& width, float& height) override;
+   void OnClicked(float x, float y, bool right) override;
    void ClearMesh();
    bool IsInside(int x, int y); // for circular mask
 

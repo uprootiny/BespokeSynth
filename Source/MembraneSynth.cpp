@@ -344,6 +344,40 @@ void MembraneSynth::DrawModule()
    DrawTextNormal(edgeStr, vizX + vizSize - 40, vizY + vizSize - 4, 8);
 }
 
+void MembraneSynth::OnClicked(float x, float y, bool right)
+{
+   IDrawableModule::OnClicked(x, y, right);
+
+   // Check if click is in the heatmap area
+   float vizX = 10, vizY = 198, vizSize = 240;
+   if (x >= vizX && x <= vizX + vizSize && y >= vizY && y <= vizY + vizSize)
+   {
+      // Convert click position to membrane coordinates (0-1)
+      float hitX = (x - vizX) / vizSize;
+      float hitY = (y - vizY) / vizSize;
+
+      // Update strike position
+      mStrikeX = ofClamp(hitX, 0.05f, 0.95f);
+      mStrikeY = ofClamp(hitY, 0.05f, 0.95f);
+
+      // Strike the membrane directly (like a note-on with velocity 100)
+      ClearMesh();
+      int sx = ofClamp((int)(mStrikeX * (mGridSize - 1)), 1, mGridSize - 2);
+      int sy = ofClamp((int)(mStrikeY * (mGridSize - 1)), 1, mGridSize - 2);
+      float sigma = 1.2f;
+      for (int my = 0; my < mGridSize; ++my)
+      {
+         for (int mx = 0; mx < mGridSize; ++mx)
+         {
+            if (!IsInside(mx, my)) continue;
+            float dx = mx - sx, dy = my - sy;
+            mP[my][mx] = 0.8f * expf(-(dx * dx + dy * dy) / (2 * sigma * sigma));
+         }
+      }
+      mEnvelope.Start(gTime, 0.8f);
+   }
+}
+
 void MembraneSynth::LoadLayout(const ofxJSONElement& moduleInfo)
 {
    mModuleSaveData.LoadInt("grid", moduleInfo, 10, kMembraneMinSize, kMembraneMaxSize, true);

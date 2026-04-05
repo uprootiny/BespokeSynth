@@ -621,6 +621,52 @@ void LatticeSynth::DrawModule()
 // SAVE/LOAD
 // ============================================================
 
+void LatticeSynth::OnClicked(float x, float y, bool right)
+{
+   IDrawableModule::OnClicked(x, y, right);
+
+   // Hit-test against node positions in the visualization
+   const float vizX = 10, vizY = 62, vizW = 280, vizH = 190;
+   const float centerX = vizX + vizW / 2, centerY = vizY + vizH / 2;
+   bool isRing = (mBoundary == kBoundary_Ring || mBoundary == kBoundary_Mobius);
+
+   for (int i = 0; i < mNumNodes; ++i)
+   {
+      float nx, ny;
+      if (isRing)
+      {
+         float radius = std::min(vizW, vizH) * 0.35f;
+         float angle = (float)i / mNumNodes * FTWO_PI - FPI / 2;
+         nx = centerX + cosf(angle) * radius;
+         ny = centerY + sinf(angle) * radius;
+      }
+      else
+      {
+         float margin = 20;
+         float t = mNumNodes > 1 ? (float)i / (mNumNodes - 1) : 0.5f;
+         nx = vizX + margin + t * (vizW - margin * 2);
+         ny = centerY;
+      }
+
+      float dx = x - nx, dy = y - ny;
+      if (dx * dx + dy * dy < 15 * 15) // 15px hit radius
+      {
+         // Excite this node directly
+         mExciteNode = i;
+         mExciteAmount = 0.8f;
+         mEnvelope.Start(gTime, 0.8f);
+
+         // Set default frequency if none set
+         if (mFrequency < 20)
+         {
+            mFrequency = 261.63f;
+            UpdateDelayLengths();
+         }
+         return;
+      }
+   }
+}
+
 void LatticeSynth::LoadLayout(const ofxJSONElement& moduleInfo)
 {
    mModuleSaveData.LoadInt("num_nodes", moduleInfo, 8, 3, kMaxLatticeNodes, true);
