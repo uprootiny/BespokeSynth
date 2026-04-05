@@ -142,7 +142,10 @@ void CoupledOscillators::Process(double time)
 
          // Verlet: v += a*dt, x += v*dt (dt=1 sample)
          mMasses[i].vel += accel;
-         mMasses[i].vel *= mDamping;
+         // Frequency-dependent damping: higher modes decay faster
+         // Physical law: Q*f = constant → damping_per_sample = base^(1 + k*log2(ratio))
+         float freqDamp = powf(mDamping, 1.0f + 0.3f * log2f(std::max(0.25f, mMasses[i].freqRatio)));
+         mMasses[i].vel *= freqDamp;
          mMasses[i].pos += mMasses[i].vel;
       }
 

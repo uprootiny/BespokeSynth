@@ -112,10 +112,15 @@ float BowedString::ComputeFriction(float vRel)
 
 float BowedString::ProcessBodyMode(BodyMode& mode, float input)
 {
-   // Biquad bandpass: peaking EQ at mode frequency with mode Q
-   float w0 = FTWO_PI * (mode.freq * mBodySize) / gSampleRate;
-   if (w0 > FPI * 0.95f) w0 = FPI * 0.95f; // clamp near Nyquist
-   float alpha = sinf(w0) / (2.0f * mode.q * mBodyResonance);
+   // Biquad bandpass with frequency-scaled Q
+   // Physical: wooden resonators have Q proportional to sqrt(f/f_ref)
+   // Higher body modes ring slightly longer relative to their period
+   float scaledFreq = mode.freq * mBodySize;
+   float w0 = FTWO_PI * scaledFreq / gSampleRate;
+   if (w0 > FPI * 0.95f) w0 = FPI * 0.95f;
+   float qScale = sqrtf(scaledFreq / 275.0f); // normalize to A0 mode
+   float effectiveQ = mode.q * mBodyResonance * std::max(0.5f, std::min(qScale, 2.0f));
+   float alpha = sinf(w0) / (2.0f * effectiveQ);
 
    float a0 = 1.0f + alpha;
    float b0 = alpha / a0;
