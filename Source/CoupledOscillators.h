@@ -82,7 +82,7 @@ private:
    // Amp
    ::ADSR mEnvelope;
    ADSRDisplay* mEnvDisplay{ nullptr };
-   float mVolume{ 0.5f };
+   float mVolume{ 0.3f };
    float mEnvValue{ 0 };
 
    // Controls

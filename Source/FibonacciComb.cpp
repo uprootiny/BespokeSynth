@@ -223,9 +223,11 @@ void FibonacciComb::DrawModule()
 
 void FibonacciComb::LoadLayout(const ofxJSONElement& moduleInfo)
 {
+   mModuleSaveData.LoadString("target", moduleInfo);
    SetUpFromSaveData();
 }
 
 void FibonacciComb::SetUpFromSaveData()
 {
+   SetTarget(TheSynth->FindModule(mModuleSaveData.GetString("target")));
 }

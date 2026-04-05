@@ -443,9 +443,11 @@ void BowedString::OnClicked(float x, float y, bool right)
 
 void BowedString::LoadLayout(const ofxJSONElement& moduleInfo)
 {
+   mModuleSaveData.LoadString("target", moduleInfo);
    SetUpFromSaveData();
 }
 
 void BowedString::SetUpFromSaveData()
 {
+   SetTarget(TheSynth->FindModule(mModuleSaveData.GetString("target")));
 }

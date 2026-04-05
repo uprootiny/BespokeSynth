@@ -388,11 +388,13 @@ void FMCluster::OnClicked(float x, float y, bool right)
 
 void FMCluster::LoadLayout(const ofxJSONElement& moduleInfo)
 {
+   mModuleSaveData.LoadString("target", moduleInfo);
    mModuleSaveData.LoadInt("ops", moduleInfo, 4, 2, kFMMaxOps, true);
    SetUpFromSaveData();
 }
 
 void FMCluster::SetUpFromSaveData()
 {
+   SetTarget(TheSynth->FindModule(mModuleSaveData.GetString("target")));
    mNumOps = mModuleSaveData.GetInt("ops");
 }

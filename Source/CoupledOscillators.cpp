@@ -327,11 +327,13 @@ void CoupledOscillators::OnClicked(float x, float y, bool right)
 
 void CoupledOscillators::LoadLayout(const ofxJSONElement& moduleInfo)
 {
+   mModuleSaveData.LoadString("target", moduleInfo);
    mModuleSaveData.LoadInt("masses", moduleInfo, 4, 2, kMaxOscCount, true);
    SetUpFromSaveData();
 }
 
 void CoupledOscillators::SetUpFromSaveData()
 {
+   SetTarget(TheSynth->FindModule(mModuleSaveData.GetString("target")));
    mNumMasses = mModuleSaveData.GetInt("masses");
 }

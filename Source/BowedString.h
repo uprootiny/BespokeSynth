@@ -132,7 +132,7 @@ private:
    float mSympCoupling{ 0.05f };
 
    // Amp
-   float mVolume{ 0.5f };
+   float mVolume{ 0.3f };
    bool mBowing{ false };
 
    // Viz

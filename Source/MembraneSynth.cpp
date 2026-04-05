@@ -380,12 +380,14 @@ void MembraneSynth::OnClicked(float x, float y, bool right)
 
 void MembraneSynth::LoadLayout(const ofxJSONElement& moduleInfo)
 {
+   mModuleSaveData.LoadString("target", moduleInfo);
    mModuleSaveData.LoadInt("grid", moduleInfo, 10, kMembraneMinSize, kMembraneMaxSize, true);
    SetUpFromSaveData();
 }
 
 void MembraneSynth::SetUpFromSaveData()
 {
+   SetTarget(TheSynth->FindModule(mModuleSaveData.GetString("target")));
    mGridSize = mModuleSaveData.GetInt("grid");
    ClearMesh();
 }

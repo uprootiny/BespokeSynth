@@ -79,7 +79,7 @@ private:
 
    // Global params
    float mFrequency{ 261.63f };
-   float mVolume{ 0.5f };
+   float mVolume{ 0.3f };
    float mFeedback{ 0.0f };     // self-modulation amount (applied to diagonal)
    float mBrightness{ 1.0f };   // scales all modulation depths
 

@@ -204,9 +204,11 @@ void TopologyDelay::DrawModule()
 
 void TopologyDelay::LoadLayout(const ofxJSONElement& moduleInfo)
 {
+   mModuleSaveData.LoadString("target", moduleInfo);
    SetUpFromSaveData();
 }
 
 void TopologyDelay::SetUpFromSaveData()
 {
+   SetTarget(TheSynth->FindModule(mModuleSaveData.GetString("target")));
 }

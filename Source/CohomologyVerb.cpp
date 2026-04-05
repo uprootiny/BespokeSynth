@@ -302,12 +302,14 @@ void CohomologyVerb::DrawModule()
 
 void CohomologyVerb::LoadLayout(const ofxJSONElement& moduleInfo)
 {
+   mModuleSaveData.LoadString("target", moduleInfo);
    mModuleSaveData.LoadInt("preset", moduleInfo, kVerb_Hall);
    SetUpFromSaveData();
 }
 
 void CohomologyVerb::SetUpFromSaveData()
 {
+   SetTarget(TheSynth->FindModule(mModuleSaveData.GetString("target")));
    mPreset = (VerbPreset)mModuleSaveData.GetInt("preset");
    BuildFDN(mPreset);
 }

@@ -341,12 +341,14 @@ void TopologyFilter::DrawModule()
 
 void TopologyFilter::LoadLayout(const ofxJSONElement& moduleInfo)
 {
+   mModuleSaveData.LoadString("target", moduleInfo);
    mModuleSaveData.LoadInt("nodes", moduleInfo, 5, 3, kFiltMaxNodes, true);
    SetUpFromSaveData();
 }
 
 void TopologyFilter::SetUpFromSaveData()
 {
+   SetTarget(TheSynth->FindModule(mModuleSaveData.GetString("target")));
    mNumNodes = mModuleSaveData.GetInt("nodes");
    UpdateDelayLengths();
 }

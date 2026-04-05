@@ -632,12 +632,14 @@ void TopologySynth::OnClicked(float x, float y, bool right)
 
 void TopologySynth::LoadLayout(const ofxJSONElement& moduleInfo)
 {
+   mModuleSaveData.LoadString("target", moduleInfo);
    mModuleSaveData.LoadInt("nodes", moduleInfo, 6, 3, kTopoMaxNodes, true);
    SetUpFromSaveData();
 }
 
 void TopologySynth::SetUpFromSaveData()
 {
+   SetTarget(TheSynth->FindModule(mModuleSaveData.GetString("target")));
    mNumNodes = mModuleSaveData.GetInt("nodes");
    UpdateDelayLengths();
 }

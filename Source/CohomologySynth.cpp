@@ -927,12 +927,14 @@ void CohomologySynth::OnClicked(float x, float y, bool right)
 
 void CohomologySynth::LoadLayout(const ofxJSONElement& moduleInfo)
 {
+   mModuleSaveData.LoadString("target", moduleInfo);
    mModuleSaveData.LoadInt("preset", moduleInfo, kPreset_Tetrahedron);
    SetUpFromSaveData();
 }
 
 void CohomologySynth::SetUpFromSaveData()
 {
+   SetTarget(TheSynth->FindModule(mModuleSaveData.GetString("target")));
    mPreset = (ComplexPreset)mModuleSaveData.GetInt("preset");
    BuildComplex(mPreset);
 }

@@ -143,7 +143,7 @@ private:
    // --- Stage 5: Amp ---
    ::ADSR mAmpEnv;
    ADSRDisplay* mAmpEnvDisplay{ nullptr };
-   float mVolume{ 0.5f };
+   float mVolume{ 0.3f };
    float mEnvValue{ 0 };
 
    // Musical state

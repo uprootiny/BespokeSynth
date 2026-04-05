@@ -669,6 +669,7 @@ void LatticeSynth::OnClicked(float x, float y, bool right)
 
 void LatticeSynth::LoadLayout(const ofxJSONElement& moduleInfo)
 {
+   mModuleSaveData.LoadString("target", moduleInfo);
    mModuleSaveData.LoadInt("num_nodes", moduleInfo, 8, 3, kMaxLatticeNodes, true);
    mModuleSaveData.LoadInt("boundary", moduleInfo, kBoundary_Ring);
    SetUpFromSaveData();
@@ -676,6 +677,7 @@ void LatticeSynth::LoadLayout(const ofxJSONElement& moduleInfo)
 
 void LatticeSynth::SetUpFromSaveData()
 {
+   SetTarget(TheSynth->FindModule(mModuleSaveData.GetString("target")));
    mNumNodes = mModuleSaveData.GetInt("num_nodes");
    mBoundary = (LatticeBoundary)mModuleSaveData.GetInt("boundary");
    UpdateDelayLengths();

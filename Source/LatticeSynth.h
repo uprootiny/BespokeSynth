@@ -176,7 +176,7 @@ private:
    // Controls
    int mExciteNode{ 0 };          // which node receives excitation
    float mCorruptionDrive{ 1.5f };
-   float mVolume{ 0.5f };
+   float mVolume{ 0.3f };
    float mReflection{ 0.0f };     // global reflection coefficient
    int mCorruptionType{ 0 };
 

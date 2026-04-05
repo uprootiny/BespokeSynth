@@ -97,7 +97,7 @@ private:
    MembraneShape mShape{ kShape_Circle };
    float mDamping{ 0.9995f };
    float mTension{ 0.4f };   // Courant number squared: c² <= 0.5 for stability
-   float mVolume{ 0.5f };
+   float mVolume{ 0.3f };
 
    // Strike position (normalized 0-1)
    float mStrikeX{ 0.33f };
