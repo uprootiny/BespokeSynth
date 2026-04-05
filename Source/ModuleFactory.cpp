@@ -291,6 +291,7 @@
 #include "BowedString.h"
 #include "FMCluster.h"
 #include "FibonacciComb.h"
+#include "WavetableMorph.h"
 
 #include <juce_core/juce_core.h>
 
@@ -326,6 +327,7 @@ ModuleFactory::ModuleFactory()
    REGISTER(BowedString, bowedstring, kModuleCategory_Synth);
    REGISTER(FMCluster, fmcluster, kModuleCategory_Synth);
    REGISTER(FibonacciComb, fibonaccicomb, kModuleCategory_Audio);
+   REGISTER(WavetableMorph, wavetable, kModuleCategory_Synth);
    REGISTER(WhiteKeys, whitekeys, kModuleCategory_Note);
    //REGISTER(Kicker, kicker, kModuleCategory_Note);
    REGISTER(RingModulator, ringmodulator, kModuleCategory_Audio);

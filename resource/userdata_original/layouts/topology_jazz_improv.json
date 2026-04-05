@@ -1,0 +1,137 @@
+{
+   "modules" : [
+      {
+         "name" : "transport",
+         "position" : [ 14.0, 30.0 ],
+         "type" : "transport"
+      },
+      {
+         "name" : "scale",
+         "position" : [ 158.0, 30.0 ],
+         "type" : "scale"
+      },
+      {
+         "comment" : "=== RHODES-LIKE KEYS: FM for electric piano character ===",
+         "name" : "rhodes",
+         "position" : [ 50.0, 150.0 ],
+         "target" : "tremolo chain",
+         "type" : "fmcluster"
+      },
+      {
+         "comment" : "=== CHORD VOICINGS: note seq with jazz voicings ===",
+         "name" : "comping",
+         "position" : [ 50.0, 550.0 ],
+         "target" : "rhodes",
+         "type" : "notesequencer"
+      },
+      {
+         "comment" : "=== TREMOLO/CHORUS via TopologyFilter (lattice resonance as chorus) ===",
+         "name" : "tremolo chain",
+         "position" : [ 50.0, 780.0 ],
+         "target" : "jazz verb",
+         "type" : "topologyfilter"
+      },
+      {
+         "comment" : "=== SOLO VOICE: BowedString for expressive lead ===",
+         "name" : "solo",
+         "position" : [ 450.0, 150.0 ],
+         "target" : "solo delay",
+         "type" : "bowedstring"
+      },
+      {
+         "comment" : "=== SOLO MELODY: note seq for bebop-ish lines ===",
+         "name" : "solo line",
+         "position" : [ 450.0, 550.0 ],
+         "target" : "solo",
+         "type" : "notesequencer"
+      },
+      {
+         "comment" : "=== SOLO DELAY: TopologyDelay with moderate diffusion ===",
+         "name" : "solo delay",
+         "position" : [ 750.0, 150.0 ],
+         "target" : "jazz verb",
+         "type" : "topologydelay"
+      },
+      {
+         "comment" : "=== WALKING BASS: LatticeSynth in ring mode (warm, sustained) ===",
+         "name" : "bass",
+         "position" : [ 750.0, 450.0 ],
+         "target" : "jazz verb",
+         "type" : "latticesynth"
+      },
+      {
+         "comment" : "=== BASS LINE: note seq for walking quarter notes ===",
+         "name" : "walk",
+         "position" : [ 750.0, 700.0 ],
+         "target" : "bass",
+         "type" : "notesequencer"
+      },
+      {
+         "comment" : "=== DRUMS: MembraneSynth for brushes-on-snare feel ===",
+         "name" : "brushes",
+         "position" : [ 1050.0, 150.0 ],
+         "target" : "drum fib",
+         "type" : "membranesynth"
+      },
+      {
+         "comment" : "=== DRUM PATTERN: swing feel ===",
+         "name" : "swing",
+         "position" : [ 1050.0, 600.0 ],
+         "target" : "brushes",
+         "type" : "drumsequencer"
+      },
+      {
+         "comment" : "=== FibonacciComb on drums for metallic brush character ===",
+         "name" : "drum fib",
+         "position" : [ 1050.0, 780.0 ],
+         "target" : "jazz verb",
+         "type" : "fibonaccicomb"
+      },
+      {
+         "comment" : "=== RIDE CYMBAL: CoupledOsc for shimmering ride ===",
+         "name" : "ride",
+         "position" : [ 1350.0, 150.0 ],
+         "target" : "jazz verb",
+         "type" : "coupledosc"
+      },
+      {
+         "name" : "ride trigger",
+         "position" : [ 1350.0, 450.0 ],
+         "target" : "ride",
+         "type" : "notesequencer"
+      },
+      {
+         "comment" : "=== ROOM: CohomologyVerb (chamber) for intimate jazz club ===",
+         "name" : "jazz verb",
+         "position" : [ 1550.0, 400.0 ],
+         "target" : "main mix",
+         "type" : "cohomologyverb"
+      },
+      {
+         "name" : "main mix",
+         "position" : [ 1800.0, 400.0 ],
+         "target" : "splitter",
+         "type" : "gain"
+      },
+      {
+         "name" : "splitter",
+         "position" : [ 1800.0, 480.0 ],
+         "target" : "output 1",
+         "target2" : "output 2",
+         "type" : "splitter"
+      },
+      {
+         "channels" : 0,
+         "name" : "output 1",
+         "position" : [ 1780.0, 560.0 ],
+         "type" : "output"
+      },
+      {
+         "channels" : 1,
+         "name" : "output 2",
+         "position" : [ 1880.0, 560.0 ],
+         "type" : "output"
+      }
+   ],
+   "zoomlocations" : []
+}

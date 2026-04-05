@@ -301,6 +301,8 @@ target_sources(BespokeSynth PRIVATE
     FMCluster.h
     FibonacciComb.cpp
     FibonacciComb.h
+    WavetableMorph.cpp
+    WavetableMorph.h
     KeyboardDisplay.cpp
     KeyboardDisplay.h
     Kicker.cpp
