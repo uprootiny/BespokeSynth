@@ -412,6 +412,30 @@ void BowedString::DrawModule()
    DrawTextNormal("bowed string", vizX + vizW - 70, vizY + vizH - 4, 8);
 }
 
+void BowedString::OnClicked(float x, float y, bool right)
+{
+   IDrawableModule::OnClicked(x, y, right);
+
+   // Click on the string area to start bowing
+   float vizX = 5, vizY = 185, vizW = 300, vizH = 145;
+   if (x >= vizX && x <= vizX + vizW && y >= vizY && y <= vizY + vizH)
+   {
+      // X position maps to bow position (0=nut, 1=bridge)
+      float clickPos = (x - vizX - 8) / (vizW - 16);
+      mBowPosition = ofClamp(clickPos, 0.03f, 0.3f);
+
+      // Start bowing if not already
+      if (!mBowing)
+      {
+         if (mFrequency < 20) mFrequency = 261.63f;
+         mStrings[0].frequency = mFrequency;
+         mStrings[0].active = true;
+         UpdateStringLengths(0);
+         mBowing = true;
+      }
+   }
+}
+
 void BowedString::LoadLayout(const ofxJSONElement& moduleInfo)
 {
    SetUpFromSaveData();

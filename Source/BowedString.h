@@ -89,6 +89,7 @@ public:
    void IntSliderUpdated(IntSlider* slider, int oldVal, double time) override {}
 
    bool IsEnabled() const override { return mEnabled; }
+   bool CheckNeedsDraw() override { return true; }
 
    void LoadLayout(const ofxJSONElement& moduleInfo) override;
    void SetUpFromSaveData() override;
@@ -96,6 +97,7 @@ public:
 private:
    void DrawModule() override;
    void GetModuleDimensions(float& width, float& height) override;
+   void OnClicked(float x, float y, bool right) override;
    void UpdateStringLengths(int stringIdx);
    float AllpassRead(float* buf, int wp, int len, float delay, float& ap);
    float ComputeFriction(float vRel);

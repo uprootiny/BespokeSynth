@@ -298,6 +298,34 @@ void CoupledOscillators::DrawModule()
    DrawTextNormal("coupled oscillators", vizX + 5, vizY + vizH - 4, 8);
 }
 
+void CoupledOscillators::OnClicked(float x, float y, bool right)
+{
+   IDrawableModule::OnClicked(x, y, right);
+
+   // Hit-test masses in the visualization area
+   float vizX = 5, vizY = 130, vizW = 230, vizH = 130;
+   float restY = vizY + vizH / 2;
+   float massSpacing = vizW / (mNumMasses + 1);
+
+   for (int i = 0; i < mNumMasses; ++i)
+   {
+      float mx = vizX + massSpacing * (i + 1);
+      float displacement = ofClamp(mMasses[i].pos * 300, -vizH / 2 + 10, vizH / 2 - 10);
+      float my = restY + displacement;
+
+      float dx = x - mx, dy = y - my;
+      if (dx * dx + dy * dy < 18 * 18)
+      {
+         // Pluck this mass
+         if (mFrequency < 20) mFrequency = 261.63f;
+         mMasses[i].vel += 0.4f;
+         mEnvelope.Start(gTime, 0.8f);
+         mExciteMass = i;
+         return;
+      }
+   }
+}
+
 void CoupledOscillators::LoadLayout(const ofxJSONElement& moduleInfo)
 {
    mModuleSaveData.LoadInt("masses", moduleInfo, 4, 2, kMaxOscCount, true);

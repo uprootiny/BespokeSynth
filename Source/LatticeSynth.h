@@ -138,6 +138,7 @@ public:
    void IntSliderUpdated(IntSlider* slider, int oldVal, double time) override;
 
    bool IsEnabled() const override { return mEnabled; }
+   bool CheckNeedsDraw() override { return true; }
 
    void LoadLayout(const ofxJSONElement& moduleInfo) override;
    void SetUpFromSaveData() override;
