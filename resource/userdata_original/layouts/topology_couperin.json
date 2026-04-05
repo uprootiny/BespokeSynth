@@ -1,0 +1,115 @@
+{
+   "modules" : [
+      {
+         "name" : "transport",
+         "position" : [ 14.0, 30.0 ],
+         "type" : "transport"
+      },
+      {
+         "name" : "scale",
+         "position" : [ 158.0, 30.0 ],
+         "type" : "scale"
+      },
+      {
+         "comment" : "=== WEAVE VOICE 1: right hand arpeggio (4-note cells) ===",
+         "name" : "weave R",
+         "position" : [ 50.0, 150.0 ],
+         "target" : "harpsichord R",
+         "type" : "notesequencer"
+      },
+      {
+         "comment" : "KarplusStrong for harpsichord pluck character",
+         "name" : "harpsichord R",
+         "position" : [ 50.0, 450.0 ],
+         "target" : "shimmer",
+         "type" : "karplusstrong"
+      },
+      {
+         "comment" : "=== WEAVE VOICE 2: left hand bass + weave ===",
+         "name" : "weave L",
+         "position" : [ 400.0, 150.0 ],
+         "target" : "harpsichord L",
+         "type" : "notesequencer"
+      },
+      {
+         "name" : "harpsichord L",
+         "position" : [ 400.0, 450.0 ],
+         "target" : "shimmer",
+         "type" : "karplusstrong"
+      },
+      {
+         "comment" : "=== SHIMMER: CoupledOsc adds metallic harpsichord resonance ===",
+         "name" : "shimmer",
+         "position" : [ 250.0, 650.0 ],
+         "target" : "room",
+         "type" : "coupledosc"
+      },
+      {
+         "comment" : "=== ORNAMENT VOICE: TopologySynth for occasional upper neighbor flicks ===",
+         "name" : "ornament",
+         "position" : [ 700.0, 150.0 ],
+         "target" : "ornament delay",
+         "type" : "topologysynth"
+      },
+      {
+         "name" : "ornament trigger",
+         "position" : [ 700.0, 400.0 ],
+         "target" : "ornament",
+         "type" : "notesequencer"
+      },
+      {
+         "comment" : "TopologyDelay for ornament echo (metric ambiguity)",
+         "name" : "ornament delay",
+         "position" : [ 1000.0, 150.0 ],
+         "target" : "room",
+         "type" : "topologydelay"
+      },
+      {
+         "comment" : "=== BASS DRONE: LatticeSynth sustaining tonic ===",
+         "name" : "bass",
+         "position" : [ 700.0, 600.0 ],
+         "target" : "room",
+         "type" : "latticesynth"
+      },
+      {
+         "name" : "bass trigger",
+         "position" : [ 700.0, 850.0 ],
+         "target" : "bass",
+         "type" : "pulser"
+      },
+      {
+         "comment" : "=== ROOM: CohomologyVerb (hall) for Baroque chamber resonance ===",
+         "name" : "room",
+         "position" : [ 1100.0, 500.0 ],
+         "target" : "main mix",
+         "type" : "cohomologyverb"
+      },
+      {
+         "comment" : "=== OUTPUT ===",
+         "name" : "main mix",
+         "position" : [ 1400.0, 450.0 ],
+         "target" : "splitter",
+         "type" : "gain"
+      },
+      {
+         "name" : "splitter",
+         "position" : [ 1400.0, 530.0 ],
+         "target" : "output 1",
+         "target2" : "output 2",
+         "type" : "splitter"
+      },
+      {
+         "channels" : 0,
+         "name" : "output 1",
+         "position" : [ 1380.0, 610.0 ],
+         "type" : "output"
+      },
+      {
+         "channels" : 1,
+         "name" : "output 2",
+         "position" : [ 1480.0, 610.0 ],
+         "type" : "output"
+      }
+   ],
+   "zoomlocations" : []
+}
