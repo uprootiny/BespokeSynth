@@ -112,7 +112,9 @@ struct CohomMode
 {
    float frequency;             // Hz, from √λ
    float amplitude;             // current amplitude
-   float phase;                 // current phase
+   float phase;                 // current phase (for viz)
+   float sinState;              // quadrature oscillator: sin component
+   float cosState;              // quadrature oscillator: cos component
    float damping;               // per-sample decay
    int dimension;               // which Cᵖ this mode lives in
    float modeShape[kMaxVertices + kMaxEdges + kMaxFaces]; // eigenvector

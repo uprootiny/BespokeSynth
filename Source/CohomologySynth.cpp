@@ -496,6 +496,8 @@ void CohomologySynth::ExtractModes()
       mode.frequency = sqrtf(lambda); // relative frequency (scaled by base pitch later)
       mode.amplitude = 0;
       mode.phase = 0;
+      mode.sinState = 0;
+      mode.cosState = 1;
       mode.damping = mDamping;
       mode.dimension = 0; // vertex modes
       mode.modeShapeSize = mNumVertices;
@@ -537,7 +539,9 @@ void CohomologySynth::ExciteModes(float velocity, int exciteVertex)
       brightScale = std::max(0.0f, brightScale);
 
       mModes[m].amplitude += velocity * fabsf(projection) * brightScale;
-      mModes[m].phase = 0; // reset phase on excitation for coherent attack
+      mModes[m].phase = 0;
+      mModes[m].sinState = 0;
+      mModes[m].cosState = 1;
    }
 }
 
@@ -584,12 +588,17 @@ void CohomologySynth::Process(double time)
          minLambda = mModes[m].frequency;
    if (minLambda < 0.01f) minLambda = 1.0f;
 
-   // Cache: precompute phase increments per mode (avoid division per sample)
-   float phaseInc[kMaxModes];
+   // Precompute quadrature rotation coefficients per mode
+   // Phase quadrature: sin_new = sin*c + cos*s; cos_new = cos*c - sin*s
+   // where c = cos(w), s = sin(w), w = 2*pi*f/sr
+   // This replaces one sinf() per mode per sample with 4 multiplies + 2 adds.
+   float rotC[kMaxModes], rotS[kMaxModes];
    for (int m = 0; m < mActiveModes; ++m)
    {
       float freq = mBaseFreq * (mModes[m].frequency / minLambda);
-      phaseInc[m] = freq * FTWO_PI / gSampleRate;
+      float w = FTWO_PI * freq / gSampleRate;
+      rotC[m] = cosf(w);
+      rotS[m] = sinf(w);
    }
 
    for (int s = 0; s < bufferSize; ++s)
@@ -602,10 +611,14 @@ void CohomologySynth::Process(double time)
          CohomMode& mode = mModes[m];
          if (mode.amplitude < 1e-7f) continue;
 
-         mode.phase += phaseInc[m];
-         if (mode.phase > FTWO_PI) mode.phase -= FTWO_PI;
+         // Quadrature rotation (no sinf() in the inner loop)
+         float newSin = mode.sinState * rotC[m] + mode.cosState * rotS[m];
+         float newCos = mode.cosState * rotC[m] - mode.sinState * rotS[m];
+         mode.sinState = newSin;
+         mode.cosState = newCos;
+         mode.phase += rotS[m]; // approximate phase tracking for viz
 
-         sample += mode.amplitude * sinf(mode.phase);
+         sample += mode.amplitude * mode.sinState;
          mode.amplitude *= mode.damping;
       }
 
@@ -620,7 +633,7 @@ void CohomologySynth::Process(double time)
       for (int m = 0; m < mActiveModes; ++m)
       {
          if (mModes[m].amplitude < 1e-7f) continue;
-         vertAmp += mModes[m].amplitude * mModes[m].modeShape[v] * sinf(mModes[m].phase);
+         vertAmp += mModes[m].amplitude * mModes[m].modeShape[v] * mModes[m].sinState;
       }
       mVertexAmplitude[v] = vertAmp;
    }
