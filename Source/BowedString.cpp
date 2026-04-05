@@ -433,8 +433,7 @@ void BowedString::OnClicked(float x, float y, bool right)
       // Start bowing if not already
       if (!mBowing)
       {
-         if (mFrequency < 20) mFrequency = 261.63f;
-         mStrings[0].frequency = mFrequency;
+         if (mStrings[0].frequency < 20) mStrings[0].frequency = 261.63f;
          mStrings[0].active = true;
          UpdateStringLengths(0);
          mBowing = true;
