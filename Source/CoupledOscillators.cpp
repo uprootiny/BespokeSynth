@@ -112,40 +112,36 @@ void CoupledOscillators::Process(double time)
    mWriteBuffer.Clear();
    float* out = mWriteBuffer.GetChannel(0);
 
-   // Precompute spring constants: omega_i^2 = (2*pi*f*ratio)^2 / sr^2
-   // Clamp at Nyquist/2 to prevent Verlet instability
+   // Precompute spring constants AND per-mass damping (once per buffer)
    float omega2[kMaxOscCount];
-   float maxFreq = gSampleRate * 0.25f; // Verlet stable up to sr/4
+   float massDamp[kMaxOscCount];
+   float maxFreq = gSampleRate * 0.25f;
    for (int i = 0; i < mNumMasses; ++i)
    {
       float f = std::min(mFrequency * mMasses[i].freqRatio, maxFreq);
       float w = FTWO_PI * f / gSampleRate;
       omega2[i] = w * w;
+      // Frequency-dependent damping: Qf = constant for metallic resonators
+      // Precomputed here, not in the inner loop (powf is expensive)
+      massDamp[i] = powf(mDamping, 1.0f + 0.3f * log2f(std::max(0.25f, mMasses[i].freqRatio)));
    }
 
    for (int s = 0; s < bufferSize; ++s)
    {
       mEnvValue = mEnvelope.Value(time);
 
-      // Störmer-Verlet integration (symplectic, second-order)
-      // For each mass: accel = -omega^2 * x + coupling * sum(x_j - x_i)
       for (int i = 0; i < mNumMasses; ++i)
       {
          float accel = -omega2[i] * mMasses[i].pos;
 
-         // Coupling forces from neighbors
          for (int j = 0; j < mNumMasses; ++j)
          {
             if (j != i)
                accel += mCoupling * (mMasses[j].pos - mMasses[i].pos);
          }
 
-         // Verlet: v += a*dt, x += v*dt (dt=1 sample)
          mMasses[i].vel += accel;
-         // Frequency-dependent damping: higher modes decay faster
-         // Physical law: Q*f = constant → damping_per_sample = base^(1 + k*log2(ratio))
-         float freqDamp = powf(mDamping, 1.0f + 0.3f * log2f(std::max(0.25f, mMasses[i].freqRatio)));
-         mMasses[i].vel *= freqDamp;
+         mMasses[i].vel *= massDamp[i]; // precomputed, no transcendentals here
          mMasses[i].pos += mMasses[i].vel;
       }
 
