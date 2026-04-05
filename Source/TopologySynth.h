@@ -121,7 +121,7 @@ private:
    TopoNode mNodes[kTopoMaxNodes];
    int mNumNodes{ 6 };
    TopoBoundary mBoundary{ kTopo_Ring };
-   float mDamping{ 0.9985f };
+   float mDamping{ 0.9995f };
    float mReflection{ 0.15f };
    int mExciteNode{ 1 };
 

@@ -48,7 +48,7 @@ void TopologySynth::CreateUIControls()
    mNumNodesSlider = new IntSlider(this, "nodes", 83, 18, 55, 13, &mNumNodes, 3, kTopoMaxNodes);
    mBoundaryDropdown = new DropdownList(this, "topo", 83, 36, (int*)&mBoundary, 55);
    mReflectionSlider = new FloatSlider(this, "refl", 143, 18, 55, 13, &mReflection, 0, 0.9f);
-   mDampingSlider = new FloatSlider(this, "damp", 143, 36, 55, 13, &mDamping, 0.99f, 0.9999f, 4);
+   mDampingSlider = new FloatSlider(this, "sustain", 143, 36, 55, 13, &mDamping, 0.999f, 0.99999f, 5);
    mExciteNodeSlider = new IntSlider(this, "hit", 203, 18, 40, 13, &mExciteNode, 0, mNumNodes - 1);
 
    mBoundaryDropdown->AddLabel("fixed", kTopo_Fixed);

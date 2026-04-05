@@ -37,7 +37,7 @@ void TopologyFilter::CreateUIControls()
    INTSLIDER(mNumNodesSlider, "nodes", &mNumNodes, 3, kFiltMaxNodes);
    DROPDOWN(mBoundaryDropdown, "topo", (int*)&mBoundary, 70);
    FLOATSLIDER(mReflectionSlider, "reflect", &mReflection, 0, 0.9f);
-   FLOATSLIDER_DIGITS(mDampingSlider, "damp", &mDamping, 0.98f, 0.9999f, 4);
+   FLOATSLIDER(mDampingSlider, "sustain", &mDamping, 0.999f, 0.99999f);
    FLOATSLIDER(mDriveSlider, "drive", &mDrive, 0.5f, 6.0f);
    DROPDOWN(mCorruptionDropdown, "corrupt", &mCorruptionType, 70);
    INTSLIDER(mInjectSlider, "inject", &mInjectNode, 0, mNumNodes - 1);

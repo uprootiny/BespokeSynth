@@ -68,7 +68,7 @@ private:
    int mDelayWritePos{ 0 };
    float mDelayTime{ 0.25f };  // seconds
    float mFeedback{ 0.5f };
-   float mWetDry{ 0.4f };
+   float mWetDry{ 0.35f };
 
    // Lattice in the feedback path
    DelayLatticeNode mNodes[kDelayLatticeNodes];

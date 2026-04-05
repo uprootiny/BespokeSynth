@@ -43,7 +43,7 @@ void LatticeSynth::CreateUIControls()
    UIBLOCK0();
    INTSLIDER(mNumNodesSlider, "nodes", &mNumNodes, 3, kMaxLatticeNodes);
    INTSLIDER(mExciteNodeSlider, "excite", &mExciteNode, 0, mNumNodes - 1);
-   FLOATSLIDER_DIGITS(mDampingSlider, "damping", &mDamping, 0.9f, 1.0f, 4);
+   FLOATSLIDER_DIGITS(mDampingSlider, "sustain", &mDamping, 0.999f, 0.99999f, 5);
    FLOATSLIDER(mReflectionSlider, "reflect", &mReflection, 0.0f, 0.95f);
    FLOATSLIDER(mCorruptionDriveSlider, "drive", &mCorruptionDrive, 0.5f, 8.0f);
    FLOATSLIDER(mVolumeSlider, "vol", &mVolume, 0.0f, 1.0f);

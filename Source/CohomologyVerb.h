@@ -78,7 +78,7 @@ private:
    float mSize{ 0.5f };       // scales delay lengths
    float mDecay{ 0.85f };     // per-reflection decay
    float mDamping{ 0.7f };    // HF absorption (lowpass in feedback)
-   float mWetDry{ 0.3f };
+   float mWetDry{ 0.35f };
    float mPreDelay{ 0.01f };  // seconds
 
    // HF damping state (one-pole lowpass per delay line)

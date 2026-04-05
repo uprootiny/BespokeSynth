@@ -81,13 +81,13 @@ private:
    FiltNode mNodes[kFiltMaxNodes];
    int mNumNodes{ 5 };
    FiltBoundary mBoundary{ kFilt_Ring };
-   float mDamping{ 0.997f };
+   float mDamping{ 0.9995f };
    float mReflection{ 0.2f };
    float mDrive{ 1.0f };
    int mCorruptionType{ 0 };
    int mInjectNode{ 0 };
    int mPickupNode{ 0 };
-   float mWetDry{ 0.5f };
+   float mWetDry{ 0.4f };
 
    // Pitch tracking
    float mFrequency{ 261.63f };

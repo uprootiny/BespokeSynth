@@ -64,7 +64,7 @@ private:
    int mDepth{ 8 };              // how many Fibonacci taps
    float mFeedback{ 0.6f };
    float mDamping{ 0.3f };       // per-tap HF damping
-   float mWetDry{ 0.5f };
+   float mWetDry{ 0.4f };
 
    // Damping state per tap
    float mDampState[kFibMaxTaps]{};
