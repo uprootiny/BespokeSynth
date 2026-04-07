@@ -6,7 +6,7 @@ Not a module. A principle. A way of making instruments that puts the musician's 
 
 ## The Problem with Our Modules Right Now
 
-We built 12 modules. Each one has a visualization that shows the DSP state and a set of slider controls that tweak parameters. The visualization and the controls are separate. You look at the graph, then you look at the sliders, then you listen. Three separate acts.
+We built 13 modules. Each one has a visualization that shows the DSP state and a set of slider controls that tweak parameters. The visualization and the controls are separate. You look at the graph, then you look at the sliders, then you listen. Three separate acts.
 
 A great instrument collapses these into one: **you touch the thing that makes the sound, and the thing you touch IS the sound.** A guitar string. A drum head. A piano key. The interface, the physics, and the visualization are the same object.
 

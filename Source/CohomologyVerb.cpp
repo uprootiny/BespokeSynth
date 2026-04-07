@@ -193,7 +193,7 @@ void CohomologyVerb::Process(double time)
       }
       wet /= mNumDelays;
 
-      input[s] = ofClamp(dry * (1.0f - mWetDry) + wet * mWetDry, -4.0f, 4.0f);
+      input[s] = ofClamp(dry * (1.0f - mWetDry) + wet * mWetDry, -1.0f, 1.0f); if (!std::isfinite(input[s])) input[s] = 0;
    }
 
    // Viz: energy per delay

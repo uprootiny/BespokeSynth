@@ -98,7 +98,7 @@ void FibonacciComb::Process(double time)
       mBuf[mWritePos] = dry + wet * mFeedback * 0.5f;
       mWritePos = (mWritePos + 1) % kFibMaxDelay;
 
-      input[s] = ofClamp(dry * (1.0f - mWetDry) + wet * mWetDry, -4.0f, 4.0f);
+      input[s] = ofClamp(dry * (1.0f - mWetDry) + wet * mWetDry, -1.0f, 1.0f); if (!std::isfinite(input[s])) input[s] = 0;
    }
 
    for (int ch = 0; ch < GetBuffer()->NumActiveChannels(); ++ch)

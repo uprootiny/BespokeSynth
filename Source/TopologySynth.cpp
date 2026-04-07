@@ -336,7 +336,7 @@ void TopologySynth::Process(double time)
       float finalOut = latticeOut * 0.6f + modalOut * 0.4f;
 
       // --- Stage 5: Amp ---
-      out[s] = ofClamp(finalOut * mVolume * mEnvValue, -2.0f, 2.0f);
+      out[s] = ofClamp(finalOut * mVolume * mEnvValue, -1.0f, 1.0f); if (!std::isfinite(out[s])) out[s] = 0;
 
       // Viz
       mScopeBuffer.Write(out[s], 0);

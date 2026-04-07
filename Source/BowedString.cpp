@@ -260,7 +260,7 @@ void BowedString::Process(double time)
       // Mix body + direct
       float finalOut = totalOut * 0.2f + bodyOut * 0.8f;
 
-      out[s] = ofClamp(finalOut * mVolume, -2.0f, 2.0f);
+      out[s] = ofClamp(finalOut * mVolume, -1.0f, 1.0f); if (!std::isfinite(out[s])) out[s] = 0;
 
       mStringViz.Write(mStrings[0].vString, 0);
       mBowContactForce = fabsf(mStrings[0].lastFriction);

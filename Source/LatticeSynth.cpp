@@ -23,6 +23,7 @@
 #include "ofxJSONElement.h"
 #include "UIControlMacros.h"
 #include "nanovg/nanovg.h"
+#include <cmath>
 
 LatticeSynth::LatticeSynth()
 : IAudioProcessor(gBufferSize)
@@ -378,7 +379,7 @@ void LatticeSynth::Process(double time)
       output /= mNumNodes;
       output *= mVolume * mEnvelopeValue;
 
-      out[s] = ofClamp(output, -2.0f, 2.0f);
+      out[s] = ofClamp(output, -1.0f, 1.0f); if (!std::isfinite(out[s])) out[s] = 0;
 
       // Store visualization state (downsample to once per buffer)
       if (s == bufferSize / 2)

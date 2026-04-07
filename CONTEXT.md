@@ -1,68 +1,97 @@
-# BespokeSynth Topology Suite — Context Map (updated 2026-04-05)
+# BespokeSynth Topology Suite — Context Map (session wrap-up)
 
 For resuming this work in a new session.
 
 ---
 
-## 12 Custom Modules (all GREEN on CI)
+## 13 Custom Modules (all GREEN on CI)
 
-| Module | Spawn | Type | DSP Core | Click-to-play? |
-|--------|-------|------|----------|---------------|
-| LatticeSynth | `latticesynth` | Synth | 1D waveguide, unitary KL scattering, Thiran allpass | Yes — click nodes |
-| CohomologySynth | `cohomologysynth` | Synth | Jacobi eigensolver, phase quadrature modal synth | No |
-| TopologySynth | `topologysynth` | Synth | 5-stage: exciter→lattice→shaper→modal→amp | No |
-| CoupledOscillators | `coupledosc` | Synth | Verlet spring-mass, freq-dependent damping | Yes — click masses |
-| MembraneSynth | `membranesynth` | Synth | 2D FDTD wave equation, bilinear heatmap | Yes — click to strike |
-| BowedString | `bowedstring` | Synth | Stick-slip friction, dual waveguide, body modes | Yes — click to bow |
-| FMCluster | `fmcluster` | Synth | N-op FM with arbitrary modulation graph | No |
-| TopologyFilter | `topologyfilter` | Effect | Lattice as resonant audio filter | — |
-| TopologyDelay | `topologydelay` | Effect | Delay + lattice-diffused feedback | — |
-| CohomologyVerb | `cohomologyverb` | Effect | Householder FDN, topology presets | — |
-| FibonacciComb | `fibonaccicomb` | Effect | Golden ratio comb, spiral viz | — |
-| *(KarplusStrong)* | `karplusstrong` | *(enhanced)* | *(string viz added)* | — |
+### Synths (8)
+| Module | Spawn | DSP | Click-to-play |
+|--------|-------|-----|--------------|
+| LatticeSynth | `latticesynth` | 1D waveguide, KL scattering, Thiran allpass | Yes |
+| CohomologySynth | `cohomologysynth` | Jacobi eigensolver, phase quadrature | Yes |
+| TopologySynth | `topologysynth` | 5-stage: exciter→lattice→shaper→modal→amp | Yes |
+| CoupledOscillators | `coupledosc` | Verlet spring-mass, freq-dependent damping | Yes |
+| MembraneSynth | `membranesynth` | 2D FDTD, bilinear heatmap | Yes |
+| BowedString | `bowedstring` | Stick-slip friction, dual waveguide, body modes | Yes |
+| FMCluster | `fmcluster` | N-op FM, arbitrary modulation graph | Yes |
+| WavetableMorph | `wavetable` | 4-slot morph, unison, bandlimited | Yes |
 
-## 3 Prefab Layouts
-- `topology_showcase.json` — all modules, basic wiring
-- `topology_advanced.json` — nontrivial chains (filter→verb, shimmer)
-- `topology_tanpura.json` — Indian classical (drone + sargam + tabla)
+### Effects (5)
+| Module | Spawn | DSP |
+|--------|-------|-----|
+| TopologyFilter | `topologyfilter` | Lattice resonance on audio |
+| TopologyDelay | `topologydelay` | Delay + lattice-diffused feedback |
+| CohomologyVerb | `cohomologyverb` | Householder FDN, 5 topology presets |
+| FibonacciComb | `fibonaccicomb` | Golden ratio comb, spiral viz |
 
-## Visual Enhancements (to existing BespokeSynth modules)
-- Drop shadows, gradient title bars, upholstery (all modules)
-- Gradient FloatSlider tracks
-- KarplusStrong vibrating string
-- SingleOscillator filled waveform
-- Looper: beat grid, playhead glow, FourTet slices, mute overlay, pitch/loop count
-- StepSequencer/NoteStepSequencer: playhead column glow
-- SeaOfGrain: speed-coded glowing grain particles
-- Vocoder: three-band spectral display (modulator × carrier = output)
+### Enhanced existing
+| Module | What we added |
+|--------|-------------|
+| KarplusStrong | Vibrating string visualization |
+| SingleOscillator | Filled gradient waveform |
+| Looper | Beat grid, FourTet slices, mute overlay, pitch/loop indicators |
+| StepSequencer | Yellow playhead column glow |
+| NoteStepSequencer | Blue playhead column glow |
+| SeaOfGrain | Speed-coded glowing grain particles |
+| Vocoder | Three-band spectral display (mod × carrier = output) |
+| All modules | Drop shadows, gradient title bars, upholstery |
+| FloatSlider | Gradient tracks |
 
-## Key Documents
-| File | Content |
-|------|---------|
-| AUDIT.md | Codebase bugs, deprecations, perf issues |
-| ANALYSIS.md | Architecture overview (244 modules) |
-| DEV-NOTES.md | How the UI is expressed, how to change it |
-| UI-NOTES.md | Color system, config surface |
+## 5 Prefab Layouts (.bsk + .json)
+- `topology_showcase` — all modules, basic wiring
+- `topology_advanced` — nontrivial effect chains
+- `topology_tanpura` — Indian classical drone + sargam + tabla
+- `topology_couperin` — Baroque harpsichord texture engine
+- `topology_jazz_improv` — jazz combo (rhodes, solo, walking bass, brushes, ride)
+
+## Known Issues / Acoustics
+- **The synths produce sound but the acoustics need work.** The physical models are mathematically correct but not yet tuned to sound natural. Specific issues:
+  - BowedString friction model needs thermal hysteresis for realistic bow changes
+  - MembraneSynth lacks air loading (Helmholtz cavity coupling)
+  - CoupledOscillators needs nonlinear stiffness for realistic bell spectra
+  - LatticeSynth ring mode can sound harsh at high reflection
+  - CohomologySynth eigenvalues give correct frequency ratios but modes lack natural decay curves
+- **Prefab .bsk files are minimal** — they define module layout and connections but not slider values. User needs to adjust parameters after loading.
+
+## Build
+```bash
+gh run download --repo uprootiny/BespokeSynth \
+  $(gh run list --repo uprootiny/BespokeSynth --limit 1 --json databaseId --jq '.[0].databaseId') \
+  --name BespokeSynth-macos-15-app --dir ~/Nissan/builds/BespokeSynth-latest
+cd ~/Nissan/builds/BespokeSynth-latest && unzip -oq *.zip && xattr -cr BespokeSynth.app
+open BespokeSynth.app
+```
+
+## Documentation (20 files)
+| File | What |
+|------|------|
+| AUDIT.md | Codebase bugs, deprecations, performance |
+| ANALYSIS.md | Architecture (244+ modules, signal types, rendering) |
+| DEV-NOTES.md | How the UI works, how to change it |
+| UI-NOTES.md | Color system, NanoVG usage, config surface |
 | PHYSICS-MODELS.md | 7 physics models for DSP+visual |
-| JOURNAL.md | Dev journal with math derivations |
-| REFLECTION.md | Quality self-assessment |
-| MODULE-IDEAS.md | 8 module concepts with priority |
+| JOURNAL.md | Dev journal with mathematical derivations |
+| REFLECTION.md | Quality self-assessment with scores |
+| MODULE-IDEAS.md | 8 unrealized module concepts |
 | DESIGN-CRITIQUE.md | Visual design assessment |
 | DRAW-HEAR-PLAY.md | Direct manipulation design system |
 | EXPLORATION-MAP.md | 15 ideas ranked by joy-per-hour |
 | CROSS-DOMAIN-RESONANCE.md | Coupling maps between resonant systems |
-| MORPHISM-PHYSICS.md | Energy transfer physics between spaces |
+| MORPHISM-PHYSICS.md | Energy transfer between topological spaces |
 | BOWED-INSTRUMENT.md | Violin mathematical architecture |
-| ALGORITHMIC-NOTES.md | DSP tricks audit |
-| NEXT-LEVEL.md | Mechanical accuracy, JUCE, skeuomorphism |
+| ALGORITHMIC-NOTES.md | DSP tricks: what's right, approximate, missing |
+| NEXT-LEVEL.md | Mechanical accuracy, JUCE leverage, skeuomorphism |
+| RESOURCE-ANALYSIS.md | Memory/compute budget (3.1MB total, 5.7% CPU) |
 | ROADMAP.md | Milestones M0-M6 |
 | CONTEXT.md | This file |
-| docs/index.html | Tutorial landing page |
-| docs/01-simplicial-complexes.html | Ch1: building spaces |
-| docs/02-cohomology.html | Ch2: cochains and sound |
+| docs/*.html | Tutorial pages (simplicial complexes, cohomology) |
 
-## Build
-- CI: GitHub Actions matrix (macos-14 Sonoma + macos-15 Sequoia)
-- JUCE macOS 15 patch: python inline in CI workflow
-- Latest build: `gh run download --repo uprootiny/BespokeSynth $(gh run list --repo uprootiny/BespokeSynth --limit 1 --json databaseId --jq '.[0].databaseId') --name BespokeSynth-macos-15-app --dir ~/Nissan/builds/BespokeSynth-latest`
-- Total new C++ across all modules: ~5,000+ lines
+## Session Stats
+- 59 commits
+- 82 files changed
+- ~12,000 lines of new code
+- 13 new modules + visual upgrades to 7 existing modules
+- 5 prefab layouts
+- 20 documentation files

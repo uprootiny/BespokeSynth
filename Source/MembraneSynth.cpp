@@ -183,7 +183,7 @@ void MembraneSynth::Process(double time)
       memcpy(mP, pNext, sizeof(pNext));
 
       // Output: read at pickup position, hard-limit to prevent pops
-      float sample = ofClamp(mP[py][px], -2.0f, 2.0f);
+      float sample = ofClamp(mP[py][px], -1.0f, 1.0f);
       out[s] = sample * mVolume * mEnvValue;
 
       time += gInvSampleRateMs;
@@ -247,8 +247,8 @@ void MembraneSynth::DrawModule()
    // Instead of per-cell circles, scan pixel rows and bilinearly interpolate
    // between grid points for a continuous surface appearance.
    {
-      float pixelStep = 3.0f / gDrawScale; // render every ~3 screen pixels
-      if (pixelStep < 1) pixelStep = 1;
+      float pixelStep = 8.0f / gDrawScale; // render every ~8 screen pixels (was 3, caused stutter)
+      if (pixelStep < 3) pixelStep = 3;
 
       for (float py = 0; py < vizSize; py += pixelStep)
       {

@@ -1,6 +1,6 @@
 # Algorithmic Quandaries, Tricks, and Missed Opportunities
 
-An honest inventory of the DSP algorithms across all 12 modules — what's correct, what's approximate, and what could be better.
+An honest inventory of the DSP algorithms across all 13 modules — what's correct, what's approximate, and what could be better.
 
 ---
 

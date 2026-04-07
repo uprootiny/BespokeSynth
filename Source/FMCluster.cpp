@@ -169,7 +169,7 @@ void FMCluster::Process(double time)
       if (carrierSum > 0.01f)
          sample /= carrierSum;
 
-      out[s] = ofClamp(sample * mVolume * mEnvValue, -2.0f, 2.0f);
+      out[s] = ofClamp(sample * mVolume * mEnvValue, -1.0f, 1.0f); if (!std::isfinite(out[s])) out[s] = 0;
       time += gInvSampleRateMs;
    }
 

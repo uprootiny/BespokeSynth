@@ -207,7 +207,7 @@ void WavetableMorph::Process(double time)
       if (mUnisonCount > 1)
          sample /= sqrtf((float)mUnisonCount); // equal-power normalization
 
-      out[s] = ofClamp(sample * mVolume * mEnvValue, -2.0f, 2.0f);
+      out[s] = ofClamp(sample * mVolume * mEnvValue, -1.0f, 1.0f); if (!std::isfinite(out[s])) out[s] = 0;
       time += gInvSampleRateMs;
    }
 
