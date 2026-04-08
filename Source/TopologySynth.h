@@ -122,7 +122,7 @@ private:
    TopoNode mNodes[kTopoMaxNodes];
    int mNumNodes{ 6 };
    TopoBoundary mBoundary{ kTopo_Ring };
-   float mDamping{ 0.9995f };
+   float mDamping{ 0.999f };
    float mReflection{ 0.15f };
    int mExciteNode{ 1 };
 
@@ -134,7 +134,7 @@ private:
    // --- Stage 4: Modal filter (simplified: 3 resonant bandpass modes) ---
    float mModalFreqs[3]{ 1.0f, 2.7f, 4.2f }; // ratios to fundamental
    float mModalAmps[3]{ 1.0f, 0.5f, 0.25f };
-   float mModalQ{ 10.0f };
+   float mModalQ{ 5.0f };
    // Biquad state per mode
    float mModalZ1[3]{};
    float mModalZ2[3]{};

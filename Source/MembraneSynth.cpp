@@ -371,10 +371,10 @@ void MembraneSynth::OnClicked(float x, float y, bool right)
          {
             if (!IsInside(mx, my)) continue;
             float dx = mx - sx, dy = my - sy;
-            mP[my][mx] = 0.8f * expf(-(dx * dx + dy * dy) / (2 * sigma * sigma));
+            mP[my][mx] = 0.3f * expf(-(dx * dx + dy * dy) / (2 * sigma * sigma));
          }
       }
-      mEnvelope.Start(gTime, 0.8f);
+      mEnvelope.Start(gTime, 0.5f);
    }
 }
 

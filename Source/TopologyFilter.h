@@ -81,7 +81,7 @@ private:
    FiltNode mNodes[kFiltMaxNodes];
    int mNumNodes{ 5 };
    FiltBoundary mBoundary{ kFilt_Ring };
-   float mDamping{ 0.9995f };
+   float mDamping{ 0.998f };
    float mReflection{ 0.2f };
    float mDrive{ 1.0f };
    int mCorruptionType{ 0 };

@@ -654,8 +654,8 @@ void LatticeSynth::OnClicked(float x, float y, bool right)
       {
          // Excite this node directly
          mExciteNode = i;
-         mExciteAmount = 0.8f;
-         mEnvelope.Start(gTime, 0.8f);
+         mExciteAmount = 0.3f;
+         mEnvelope.Start(gTime, 0.5f);
 
          // Set default frequency if none set
          if (mFrequency < 20)

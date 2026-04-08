@@ -918,8 +918,8 @@ void CohomologySynth::OnClicked(float x, float y, bool right)
          if (mFrequency < 20) { mFrequency = 261.63f; mBaseFreq = 261.63f; }
          for (int m = 0; m < mActiveModes; ++m)
             mModes[m].amplitude = 0;
-         ExciteModes(0.8f, v);
-         mEnvelope.Start(gTime, 0.8f);
+         ExciteModes(0.3f, v);
+         mEnvelope.Start(gTime, 0.5f);
          return;
       }
    }

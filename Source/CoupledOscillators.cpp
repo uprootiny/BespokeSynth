@@ -317,8 +317,8 @@ void CoupledOscillators::OnClicked(float x, float y, bool right)
       {
          // Pluck this mass
          if (mFrequency < 20) mFrequency = 261.63f;
-         mMasses[i].vel += 0.4f;
-         mEnvelope.Start(gTime, 0.8f);
+         mMasses[i].vel += 0.15f;
+         mEnvelope.Start(gTime, 0.5f);
          mExciteMass = i;
          return;
       }

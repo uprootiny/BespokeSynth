@@ -220,7 +220,7 @@ private:
 
    // Parameters
    ComplexPreset mPreset{ kPreset_Tetrahedron };
-   float mDamping{ 0.9995f };
+   float mDamping{ 0.999f };
    float mBrightness{ 1.0f };   // high-mode amplitude scaling
    float mVolume{ 0.3f };
    float mExciteSpread{ 0.5f }; // how many vertices receive excitation

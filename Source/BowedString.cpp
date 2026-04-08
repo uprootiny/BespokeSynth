@@ -52,7 +52,7 @@ void BowedString::CreateUIControls()
    IDrawableModule::CreateUIControls();
 
    UIBLOCK0();
-   FLOATSLIDER(mBowVelSlider, "bow vel", &mBowVelocity, 0, 0.8f);
+   FLOATSLIDER(mBowVelSlider, "bow vel", &mBowVelocity, 0, 0.4f);
    FLOATSLIDER(mBowPressSlider, "pressure", &mBowPressure, 0.05f, 1.0f);
    FLOATSLIDER(mBowPosSlider, "bow pos", &mBowPosition, 0.03f, 0.3f);
    FLOATSLIDER(mBowNoiseSlider, "rosin", &mBowNoise, 0, 0.1f);

@@ -95,8 +95,8 @@ private:
    int mGridSize{ 10 };
    MembraneBoundary mBoundary{ kMembrane_Clamped };
    MembraneShape mShape{ kShape_Circle };
-   float mDamping{ 0.9995f };
-   float mTension{ 0.4f };   // Courant number squared: c² <= 0.5 for stability
+   float mDamping{ 0.999f };
+   float mTension{ 0.3f };   // Courant number squared: c² <= 0.5 for stability
    float mVolume{ 0.3f };
 
    // Strike position (normalized 0-1)

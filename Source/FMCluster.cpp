@@ -378,7 +378,7 @@ void FMCluster::OnClicked(float x, float y, bool right)
       {
          // Trigger note with this op as primary carrier
          if (mFrequency < 20) mFrequency = 261.63f;
-         mEnvelope.Start(gTime, 0.8f);
+         mEnvelope.Start(gTime, 0.5f);
          for (int j = 0; j < mNumOps; ++j)
             mOps[j].phase = 0;
          return;

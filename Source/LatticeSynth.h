@@ -162,7 +162,7 @@ private:
    LatticeNode mNodes[kMaxLatticeNodes];
    int mNumNodes{ 8 };
    LatticeBoundary mBoundary{ kBoundary_Ring };
-   float mDamping{ 0.9995f };     // per-sample energy loss
+   float mDamping{ 0.999f };     // per-sample energy loss
    float mPitch{ 60 };            // current MIDI pitch
    float mFrequency{ 261.63f };   // Hz
    float mExciteAmount{ 0 };      // current excitation amplitude

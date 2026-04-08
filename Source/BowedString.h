@@ -111,8 +111,8 @@ private:
    float mSympTuning[kMaxStrings]{ 0, 7, 12, 19 }; // unison, fifth, octave, 12th
 
    // Bow parameters
-   float mBowVelocity{ 0.3f };
-   float mBowPressure{ 0.5f };
+   float mBowVelocity{ 0.15f };
+   float mBowPressure{ 0.3f };
    float mBowPosition{ 0.12f }; // 0=bridge, 1=nut. 0.12 = normal playing position
    float mBowNoise{ 0.02f };
 

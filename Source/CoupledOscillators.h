@@ -74,7 +74,7 @@ private:
    CoupledMass mMasses[kMaxOscCount];
    int mNumMasses{ 4 };
    float mCoupling{ 0.02f };     // spring constant between masses
-   float mDamping{ 0.9997f };    // per-sample velocity decay
+   float mDamping{ 0.9993f };    // per-sample velocity decay
    float mSpread{ 0.05f };       // frequency detuning between masses
    float mFrequency{ 261.63f };
    int mExciteMass{ 0 };

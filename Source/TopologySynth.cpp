@@ -67,7 +67,7 @@ void TopologySynth::CreateUIControls()
 
    // Stage 4+5: Modal + Amp (below the panels)
    mModalBrightnessSlider = new FloatSlider(this, "bright", 8, 193, 80, 13, &mModalBrightness, 0, 1);
-   mModalQSlider = new FloatSlider(this, "Q", 93, 193, 60, 13, &mModalQ, 1, 50);
+   mModalQSlider = new FloatSlider(this, "Q", 93, 193, 60, 13, &mModalQ, 1, 15);
    mVolumeSlider = new FloatSlider(this, "vol", 158, 193, 60, 13, &mVolume, 0, 1);
    mAmpEnvDisplay = new ADSRDisplay(this, "env", 223, 186, 140, 24, &mAmpEnv);
 }
@@ -599,8 +599,8 @@ void TopologySynth::OnClicked(float x, float y, bool right)
       if (mFrequency < 20) mFrequency = 261.63f;
       UpdateDelayLengths();
       ClearState();
-      mAmpEnv.Start(gTime, 0.8f);
-      mExciteAmount = 0.8f;
+      mAmpEnv.Start(gTime, 0.5f);
+      mExciteAmount = 0.3f;
       mNoteOn = true;
 
       // Determine which node was closest to click
