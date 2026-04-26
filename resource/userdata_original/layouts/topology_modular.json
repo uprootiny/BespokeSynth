@@ -1,0 +1,120 @@
+{
+   "modules" : [
+      {
+         "comment" : "West-Coast generative patch — modulators are unwired by default; patch the Pulser/CurveLooper outputs into voice/filter parameters via the GUI to bring it alive",
+         "name" : "transport",
+         "position" : [ 14.0, 30.0 ],
+         "type" : "transport"
+      },
+      {
+         "name" : "scale",
+         "position" : [ 158.0, 30.0 ],
+         "type" : "scale"
+      },
+
+      {
+         "comment" : "=== CLOCK ===  master pulse divider — patch into voice triggers and CV S&H",
+         "name" : "clock",
+         "position" : [ 50.0, 150.0 ],
+         "target" : "clock div",
+         "type" : "pulser"
+      },
+      {
+         "comment" : "PulseSequence as Euclidean / 8-step gate divider for triggering voices on uneven beats",
+         "name" : "clock div",
+         "position" : [ 50.0, 320.0 ],
+         "type" : "pulsesequence"
+      },
+
+      {
+         "comment" : "=== CV: STEPPED VOLTAGE ===  ControlSequencer as quantized S&H — patch its output into wavetable position / filter cutoff",
+         "name" : "stepped cv",
+         "position" : [ 50.0, 520.0 ],
+         "type" : "controlsequencer"
+      },
+      {
+         "comment" : "=== CV: SHAPED LFO ===  CurveLooper as drawn-curve LFO — patch into delay time, verb size, or wavetable morph",
+         "name" : "shaped lfo",
+         "position" : [ 50.0, 720.0 ],
+         "type" : "curvelooper"
+      },
+
+      {
+         "comment" : "=== LEAD VOICE ===  WavetableMorph for evolving timbre under CV control",
+         "name" : "wave voice",
+         "position" : [ 380.0, 150.0 ],
+         "target" : "vcf",
+         "type" : "wavetable"
+      },
+      {
+         "comment" : "Note source for the wave voice — sparse melodic gesture",
+         "name" : "wave seq",
+         "position" : [ 380.0, 400.0 ],
+         "target" : "wave voice",
+         "type" : "notesequencer"
+      },
+
+      {
+         "comment" : "=== DRONE VOICE ===  TopologySynth as a sustained polyphonic drone bed",
+         "name" : "drone voice",
+         "position" : [ 720.0, 150.0 ],
+         "target" : "vcf",
+         "type" : "topologysynth"
+      },
+      {
+         "name" : "drone trig",
+         "position" : [ 720.0, 400.0 ],
+         "target" : "drone voice",
+         "type" : "notesequencer"
+      },
+
+      {
+         "comment" : "=== VCF ===  TopologyFilter — sweep cutoff via stepped cv or shaped lfo for the classic west-coast ramp/fall",
+         "name" : "vcf",
+         "position" : [ 1000.0, 270.0 ],
+         "target" : "spring",
+         "type" : "topologyfilter"
+      },
+      {
+         "comment" : "=== SPRING TANK ===  TopologyDelay as a long, modulated spring/tape echo",
+         "name" : "spring",
+         "position" : [ 1000.0, 470.0 ],
+         "target" : "space",
+         "type" : "topologydelay"
+      },
+      {
+         "comment" : "=== SPACE ===  CohomologyVerb for the patch's outer atmosphere",
+         "name" : "space",
+         "position" : [ 1000.0, 670.0 ],
+         "target" : "main mix",
+         "type" : "cohomologyverb"
+      },
+
+      {
+         "name" : "main mix",
+         "position" : [ 1340.0, 470.0 ],
+         "target" : "splitter",
+         "type" : "gain"
+      },
+      {
+         "name" : "splitter",
+         "position" : [ 1340.0, 560.0 ],
+         "target" : "output 1",
+         "target2" : "output 2",
+         "type" : "splitter"
+      },
+      {
+         "channels" : 0,
+         "name" : "output 1",
+         "position" : [ 1320.0, 650.0 ],
+         "type" : "output"
+      },
+      {
+         "channels" : 1,
+         "name" : "output 2",
+         "position" : [ 1420.0, 650.0 ],
+         "type" : "output"
+      }
+   ],
+   "zoomlocations" : []
+}

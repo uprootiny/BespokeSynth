@@ -1,0 +1,105 @@
+{
+   "modules" : [
+      {
+         "comment" : "Set scale to Ionian/Mixolydian/Aeolian (modal). Each voice has its own notesequencer — edit them so vertical sonorities are consonant and motion is mostly stepwise / contrary",
+         "name" : "transport",
+         "position" : [ 14.0, 30.0 ],
+         "type" : "transport"
+      },
+      {
+         "name" : "scale",
+         "position" : [ 158.0, 30.0 ],
+         "type" : "scale"
+      },
+
+      {
+         "comment" : "=== SOPRANO ===  top voice, highest range — viol consort timbre via bowed-string",
+         "name" : "soprano line",
+         "position" : [ 50.0, 150.0 ],
+         "target" : "soprano",
+         "type" : "notesequencer"
+      },
+      {
+         "name" : "soprano",
+         "position" : [ 50.0, 400.0 ],
+         "target" : "consort verb",
+         "type" : "bowedstring"
+      },
+
+      {
+         "comment" : "=== ALTO ===  inner voice — fills the third/fifth above the tenor; avoid parallel fifths/octaves with soprano",
+         "name" : "alto line",
+         "position" : [ 380.0, 150.0 ],
+         "target" : "alto",
+         "type" : "notesequencer"
+      },
+      {
+         "name" : "alto",
+         "position" : [ 380.0, 400.0 ],
+         "target" : "consort verb",
+         "type" : "bowedstring"
+      },
+
+      {
+         "comment" : "=== TENOR ===  the structural cantus firmus voice — historically the slow-moving line others are composed against",
+         "name" : "tenor line",
+         "position" : [ 710.0, 150.0 ],
+         "target" : "tenor",
+         "type" : "notesequencer"
+      },
+      {
+         "name" : "tenor",
+         "position" : [ 710.0, 400.0 ],
+         "target" : "consort verb",
+         "type" : "bowedstring"
+      },
+
+      {
+         "comment" : "=== BASS ===  harmonic foundation — root motion drives the implied harmony beneath the polyphony",
+         "name" : "bass line",
+         "position" : [ 1040.0, 150.0 ],
+         "target" : "bass",
+         "type" : "notesequencer"
+      },
+      {
+         "name" : "bass",
+         "position" : [ 1040.0, 400.0 ],
+         "target" : "consort verb",
+         "type" : "bowedstring"
+      },
+
+      {
+         "comment" : "=== CONSORT VERB ===  small chamber resonance — keep wet level moderate so individual lines remain audible",
+         "name" : "consort verb",
+         "position" : [ 1380.0, 350.0 ],
+         "target" : "main mix",
+         "type" : "cohomologyverb"
+      },
+      {
+         "name" : "main mix",
+         "position" : [ 1640.0, 350.0 ],
+         "target" : "splitter",
+         "type" : "gain"
+      },
+      {
+         "name" : "splitter",
+         "position" : [ 1640.0, 440.0 ],
+         "target" : "output 1",
+         "target2" : "output 2",
+         "type" : "splitter"
+      },
+      {
+         "channels" : 0,
+         "name" : "output 1",
+         "position" : [ 1620.0, 530.0 ],
+         "type" : "output"
+      },
+      {
+         "channels" : 1,
+         "name" : "output 2",
+         "position" : [ 1720.0, 530.0 ],
+         "type" : "output"
+      }
+   ],
+   "zoomlocations" : []
+}

@@ -1,0 +1,108 @@
+{
+   "modules" : [
+      {
+         "comment" : "Set scale to Dorian/Phrygian/Mixolydian for authentic modal flavor (no leading-tone Ionian)",
+         "name" : "transport",
+         "position" : [ 14.0, 30.0 ],
+         "type" : "transport"
+      },
+      {
+         "name" : "scale",
+         "position" : [ 158.0, 30.0 ],
+         "type" : "scale"
+      },
+
+      {
+         "comment" : "=== TENOR DRONE ===  the cantus firmus pedal — a sustained open fifth/octave (latticesynth holds the modal final)",
+         "name" : "drone",
+         "position" : [ 50.0, 150.0 ],
+         "target" : "church",
+         "type" : "latticesynth"
+      },
+      {
+         "comment" : "Pulser as slow re-strike for the drone (organum tenor doesn't decay; restrike very rarely)",
+         "name" : "drone tap",
+         "position" : [ 50.0, 400.0 ],
+         "target" : "drone",
+         "type" : "pulser"
+      },
+
+      {
+         "comment" : "=== VOX PRINCIPALIS ===  the chant melody, top voice — bowed-string vielle character",
+         "name" : "vox principalis",
+         "position" : [ 380.0, 150.0 ],
+         "target" : "church",
+         "type" : "bowedstring"
+      },
+      {
+         "comment" : "Chant line: stepwise modal melody, mostly conjunct motion",
+         "name" : "chant",
+         "position" : [ 380.0, 400.0 ],
+         "target" : "vox principalis",
+         "type" : "notesequencer"
+      },
+
+      {
+         "comment" : "=== VOX ORGANALIS ===  parallel voice at the perfect fifth — the defining medieval interval",
+         "name" : "vox organalis",
+         "position" : [ 720.0, 150.0 ],
+         "target" : "church",
+         "type" : "bowedstring"
+      },
+      {
+         "comment" : "Same melodic shape as the chant, transposed down a fifth (open organum)",
+         "name" : "organum line",
+         "position" : [ 720.0, 400.0 ],
+         "target" : "vox organalis",
+         "type" : "notesequencer"
+      },
+
+      {
+         "comment" : "=== TROMPETTE ===  hurdy-gurdy buzzing bridge — rhythmic membrane tap on every quarter",
+         "name" : "trompette",
+         "position" : [ 1060.0, 150.0 ],
+         "target" : "church",
+         "type" : "membranesynth"
+      },
+      {
+         "name" : "buzz tap",
+         "position" : [ 1060.0, 400.0 ],
+         "target" : "trompette",
+         "type" : "pulser"
+      },
+
+      {
+         "comment" : "=== CHURCH ===  CohomologyVerb tuned long for stone-cathedral resonance",
+         "name" : "church",
+         "position" : [ 1380.0, 350.0 ],
+         "target" : "main mix",
+         "type" : "cohomologyverb"
+      },
+      {
+         "name" : "main mix",
+         "position" : [ 1640.0, 350.0 ],
+         "target" : "splitter",
+         "type" : "gain"
+      },
+      {
+         "name" : "splitter",
+         "position" : [ 1640.0, 440.0 ],
+         "target" : "output 1",
+         "target2" : "output 2",
+         "type" : "splitter"
+      },
+      {
+         "channels" : 0,
+         "name" : "output 1",
+         "position" : [ 1620.0, 530.0 ],
+         "type" : "output"
+      },
+      {
+         "channels" : 1,
+         "name" : "output 2",
+         "position" : [ 1720.0, 530.0 ],
+         "type" : "output"
+      }
+   ],
+   "zoomlocations" : []
+}
