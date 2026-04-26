@@ -1,0 +1,188 @@
+{
+   "modules" : [
+      {
+         "name" : "transport",
+         "position" : [ 14.0, 30.0 ],
+         "type" : "transport"
+      },
+      {
+         "name" : "scale",
+         "position" : [ 158.0, 30.0 ],
+         "type" : "scale"
+      },
+
+      {
+         "comment" : "=== DECK A — TECHNO PULSE ===  kick/snare/hat pattern through a sweepable filter (the DJ filter knob)",
+         "name" : "seq A",
+         "position" : [ 50.0, 150.0 ],
+         "target" : "drum A",
+         "type" : "drumsequencer"
+      },
+      {
+         "name" : "drum A",
+         "position" : [ 50.0, 400.0 ],
+         "target" : "filter A",
+         "type" : "drumsynth"
+      },
+      {
+         "comment" : "TopologyFilter as the deck's filter — sweep cutoff to bring/dip the beat",
+         "name" : "filter A",
+         "position" : [ 50.0, 600.0 ],
+         "target" : "eq A",
+         "type" : "topologyfilter"
+      },
+      {
+         "name" : "eq A",
+         "position" : [ 50.0, 800.0 ],
+         "target" : "fader A",
+         "type" : "eq"
+      },
+      {
+         "comment" : "Channel fader for Deck A — set 0 to mute, drive up to bring deck into the mix",
+         "name" : "fader A",
+         "position" : [ 50.0, 950.0 ],
+         "target" : "main mix",
+         "type" : "gain"
+      },
+
+      {
+         "comment" : "=== DECK B — ACID BASS ===  303-style sequence into a gritty resonant lattice voice + echo",
+         "name" : "seq B",
+         "position" : [ 380.0, 150.0 ],
+         "target" : "bass B",
+         "type" : "notesequencer"
+      },
+      {
+         "name" : "bass B",
+         "position" : [ 380.0, 400.0 ],
+         "target" : "delay B",
+         "type" : "latticesynth"
+      },
+      {
+         "comment" : "FreqDelay for tempo-locked acid echo",
+         "name" : "delay B",
+         "position" : [ 380.0, 600.0 ],
+         "target" : "eq B",
+         "type" : "freqdelay"
+      },
+      {
+         "name" : "eq B",
+         "position" : [ 380.0, 800.0 ],
+         "target" : "fader B",
+         "type" : "eq"
+      },
+      {
+         "name" : "fader B",
+         "position" : [ 380.0, 950.0 ],
+         "target" : "main mix",
+         "type" : "gain"
+      },
+
+      {
+         "comment" : "=== DECK C — DUB CHORDS ===  slow chord stabs through KarplusStrong + dub delay + verb send",
+         "name" : "seq C",
+         "position" : [ 710.0, 150.0 ],
+         "target" : "chord C",
+         "type" : "notesequencer"
+      },
+      {
+         "name" : "chord C",
+         "position" : [ 710.0, 400.0 ],
+         "target" : "dub C",
+         "type" : "karplusstrong"
+      },
+      {
+         "comment" : "TopologyDelay tuned long for dub-style spaced echoes",
+         "name" : "dub C",
+         "position" : [ 710.0, 550.0 ],
+         "target" : "verb C",
+         "type" : "topologydelay"
+      },
+      {
+         "comment" : "CohomologyVerb for chamber depth on the dub chain",
+         "name" : "verb C",
+         "position" : [ 710.0, 700.0 ],
+         "target" : "eq C",
+         "type" : "cohomologyverb"
+      },
+      {
+         "name" : "eq C",
+         "position" : [ 710.0, 850.0 ],
+         "target" : "fader C",
+         "type" : "eq"
+      },
+      {
+         "name" : "fader C",
+         "position" : [ 710.0, 1000.0 ],
+         "target" : "main mix",
+         "type" : "gain"
+      },
+
+      {
+         "comment" : "=== DECK D — COSMIC LEAD ===  bowed-string ambient lead with shimmering coupled-osc body",
+         "name" : "seq D",
+         "position" : [ 1040.0, 150.0 ],
+         "target" : "lead D",
+         "type" : "notesequencer"
+      },
+      {
+         "name" : "lead D",
+         "position" : [ 1040.0, 400.0 ],
+         "target" : "shimmer D",
+         "type" : "bowedstring"
+      },
+      {
+         "comment" : "CoupledOsc for shimmering metallic body resonance",
+         "name" : "shimmer D",
+         "position" : [ 1040.0, 600.0 ],
+         "target" : "eq D",
+         "type" : "coupledosc"
+      },
+      {
+         "name" : "eq D",
+         "position" : [ 1040.0, 800.0 ],
+         "target" : "fader D",
+         "type" : "eq"
+      },
+      {
+         "name" : "fader D",
+         "position" : [ 1040.0, 950.0 ],
+         "target" : "main mix",
+         "type" : "gain"
+      },
+
+      {
+         "comment" : "=== MASTER ===  4 deck faders sum here; master EQ for tonal control before the bus split",
+         "name" : "main mix",
+         "position" : [ 1400.0, 400.0 ],
+         "target" : "master eq",
+         "type" : "gain"
+      },
+      {
+         "name" : "master eq",
+         "position" : [ 1400.0, 580.0 ],
+         "target" : "splitter",
+         "type" : "eq"
+      },
+      {
+         "name" : "splitter",
+         "position" : [ 1400.0, 720.0 ],
+         "target" : "output 1",
+         "target2" : "output 2",
+         "type" : "splitter"
+      },
+      {
+         "channels" : 0,
+         "name" : "output 1",
+         "position" : [ 1380.0, 820.0 ],
+         "type" : "output"
+      },
+      {
+         "channels" : 1,
+         "name" : "output 2",
+         "position" : [ 1480.0, 820.0 ],
+         "type" : "output"
+      }
+   ],
+   "zoomlocations" : []
+}
